@@ -1,0 +1,80 @@
+{
+  "name": "t-scriber",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "transcribe": "node transcribe-cli.js",
+    "test": "node --test test/*.test.js",
+    "gen-fixture": "node test/e2e/gen-fixture.js",
+    "test:e2e": "RUN_E2E=1 node --test test/e2e/*.e2e.js",
+    "test:e2e:heavy": "RUN_E2E=1 RUN_E2E_HEAVY=1 node --test test/e2e/transcribe.e2e.js",
+    "test:diarize-parity": "node test/e2e/eval/diarize-parity.js",
+    "postinstall": "electron-rebuild && node scripts/fix-electron.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0",
+    "onnxruntime-node": "^1.26.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "build": {
+    "appId": "io.tscriber.app",
+    "productName": "T-Scriber",
+    "copyright": "Copyright © 2024",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "T-Scriber",
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "files": [
+      "**/*",
+      "!test/**",
+      "!scripts/**",
+      "!transcribe-cli.js"
+    ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/voice-encoder.onnx"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/staged/bin",
+        "to": "bin"
+      },
+      {
+        "from": "../extension",
+        "to": "extension"
+      },
+      {
+        "from": "../models/ggml-silero-v5.1.2.bin",
+        "to": "models/ggml-silero-v5.1.2.bin"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

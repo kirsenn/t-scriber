@@ -1,0 +1,22 @@
+{
+  "name": "diarize-hidden-tab",
+  "description": "Diarization fallback test: Anna (Samantha, US female) and Boris (Daniel, GB male) anchor in phase 1 with events, then continue in phase 2 with no events (simulated hidden tab). Diarization must re-attribute the event-less segments to the correct speaker by voice. Each hidden turn carries a unique marker word so the test can assert exact attribution.",
+  "selfName": "Denis",
+  "gapMs": 1200,
+  "voices": {
+    "Anna":  { "say": "Samantha", "markup": "" },
+    "Boris": { "say": "Daniel",   "markup": "" }
+  },
+  "script": [
+    { "speaker": "Anna",  "track": "tab", "text": "Let's start the project discussion today. We really need to finalize the release timeline and agree on the main priorities for this quarter, so the whole team stays aligned and nobody is confused about what comes next." },
+    { "speaker": "Boris", "track": "tab", "text": "I completely agree with that point. I think we should aim for the fifteenth of next month, because that gives us enough time for proper testing and a careful review of the whole system before we ship anything to production." },
+    { "speaker": "Anna",  "track": "tab", "text": "That works well for me as well. I will prepare all of the interface mockups and the design documents by Wednesday, so that everyone on the team can review them early and leave their comments.", "event": false, "marker": "Wednesday" },
+    { "speaker": "Boris", "track": "tab", "text": "Sounds good to me. I will personally take care of the backend update and make sure that everything is fully ready and tested well before the final deadline that we just agreed on.", "event": false, "marker": "deadline" },
+    { "speaker": "Anna",  "track": "tab", "text": "Perfect, then let's go with that plan and reconvene next week to check on the overall progress together." }
+  ],
+  "facts": [],
+  "requiredSummaryFacts": [],
+  "niceToHaveSummaryFacts": [],
+  "transcriptFacts": [],
+  "diarize": true
+}

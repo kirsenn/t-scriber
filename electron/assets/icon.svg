@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Blue squircle background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#2563eb"/>
+
+  <!-- Slightly lighter top-left glow -->
+  <rect width="512" height="512" rx="112" ry="112"
+        fill="#3b82f6" opacity="0.45"
+        transform="scale(0.85) translate(38,38)"/>
+
+  <!-- Microphone body (large pill) -->
+  <rect x="188" y="96" width="136" height="210" rx="68" ry="68" fill="white"/>
+
+  <!-- Stand bracket -->
+  <path d="M 156 290 Q 156 388 256 388 Q 356 388 356 290"
+        stroke="white" stroke-width="24" fill="none"
+        stroke-linecap="round"/>
+
+  <!-- Vertical post -->
+  <line x1="256" y1="388" x2="256" y2="432"
+        stroke="white" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- Base -->
+  <line x1="192" y1="432" x2="320" y2="432"
+        stroke="white" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- Sound wave left -->
+  <path d="M 136 238 Q 112 256 136 274"
+        stroke="white" stroke-width="18" fill="none"
+        stroke-linecap="round" opacity="0.55"/>
+  <path d="M 100 212 Q 66 256 100 300"
+        stroke="white" stroke-width="18" fill="none"
+        stroke-linecap="round" opacity="0.3"/>
+
+  <!-- Sound wave right -->
+  <path d="M 376 238 Q 400 256 376 274"
+        stroke="white" stroke-width="18" fill="none"
+        stroke-linecap="round" opacity="0.55"/>
+  <path d="M 412 212 Q 446 256 412 300"
+        stroke="white" stroke-width="18" fill="none"
+        stroke-linecap="round" opacity="0.3"/>
+</svg>

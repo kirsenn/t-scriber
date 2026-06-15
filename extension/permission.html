@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>t-scriber — microphone access</title>
+    <style>
+      body {
+        font: 15px -apple-system, system-ui, sans-serif;
+        max-width: 440px;
+        margin: 80px auto;
+        padding: 0 20px;
+        color: #1a1a1a;
+        line-height: 1.5;
+      }
+      h1 { font-size: 18px; }
+      #status { margin-top: 16px; padding: 12px; border-radius: 8px; background: #f1f3f4; }
+      .ok { background: #e6f4ea !important; color: #137333; }
+      .err { background: #fce8e6 !important; color: #c5221f; }
+      code { background: #eee; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>t-scriber needs your microphone</h1>
+    <p>
+      This grants the extension access to your microphone so your own voice
+      (the "self" track) is captured alongside the meeting audio. Click
+      <b>Allow</b> in the browser prompt. Everything stays local.
+    </p>
+    <div id="status">Requesting microphone…</div>
+    <script src="permission.js"></script>
+  </body>
+</html>

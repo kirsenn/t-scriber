@@ -1,0 +1,30 @@
+{
+  "name": "mic-heavy",
+  "description": "Денис говорит с mic три раза. Стресс-тест self_name fallback при частом чередовании треков.",
+  "selfName": "Денис",
+  "gapMs": 3000,
+  "voices": {
+    "Анна":  "[[pbas 62]][[rate 195]]",
+    "Борис": "[[pbas 30]][[rate 165]]",
+    "Денис": "[[pbas 45]][[rate 178]]"
+  },
+  "script": [
+    { "speaker": "Анна",  "track": "tab", "text": "Начинаем обсуждение плана на квартал." },
+    { "speaker": "Денис", "track": "mic", "text": "Сколько времени у нас на этот проект?" },
+    { "speaker": "Борис", "track": "tab", "text": "Думаю, два месяца. Нужно распределить задачи." },
+    { "speaker": "Денис", "track": "mic", "text": "Я готов взять документацию на себя." },
+    { "speaker": "Анна",  "track": "tab", "text": "Отлично. Я займусь дизайном интерфейса." },
+    { "speaker": "Денис", "track": "mic", "text": "Когда первая проверка?" },
+    { "speaker": "Борис", "track": "tab", "text": "Предлагаю через три недели." },
+    { "speaker": "Анна",  "track": "tab", "text": "Согласна. Договорились — первая проверка через три недели." }
+  ],
+  "facts": [
+    { "id": "denis_task",  "label": "Денис берёт документацию", "patterns": ["документацию", "документация", "документации"] },
+    { "id": "anna_task",   "label": "Анна — дизайн интерфейса", "patterns": ["дизайн интерфейса", "дизайн"] },
+    { "id": "review_date", "label": "Проверка через три недели", "patterns": ["три недели", "через три недели"] }
+  ],
+  "requiredSummaryFacts":  ["anna_task", "review_date"],
+  "niceToHaveSummaryFacts": ["denis_task"],
+  "forbiddenSummaryFacts": [],
+  "transcriptFacts": ["review_date"]
+}

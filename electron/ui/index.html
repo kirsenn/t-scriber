@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>T-Scriber</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div class="titlebar">
+      <span class="app-name">T-Scriber</span>
+    </div>
+
+    <div class="main-section">
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Участники</th>
+              <th>Суть</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="4" class="loading">Загрузка…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="detail-section">
+        <div id="detail-content"></div>
+      </div>
+    </div>
+
+    <div class="log-panel">
+      <div class="log-header" id="log-toggle">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Запуск сервера…</span>
+        <span class="log-chevron" id="log-chevron">▾</span>
+      </div>
+      <div class="log-lines" id="log-lines"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
