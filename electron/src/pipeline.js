@@ -23,6 +23,7 @@ async function process(dir, cfg, signal) {
     vadModel: cfg.vad_model,
     language: cfg.language,
     threads:  cfg.threads,
+    prompt:   cfg.whisper_prompt || '',
   };
 
   const timing = await loadTiming(path.join(dir, 'timing.json'));
@@ -67,7 +68,7 @@ async function process(dir, cfg, signal) {
 
   if (cfg.summarize && transcriptText) {
     try {
-      const client = new AnalyzeClient(cfg.llama_bin, cfg.gemma_model, { temp: cfg.llm_temp, seed: cfg.llm_seed });
+      const client = new AnalyzeClient(cfg.llama_bin, cfg.gemma_model, { temp: cfg.llm_temp, seed: cfg.llm_seed, maxTokens: cfg.llm_max_tokens, ctxSize: cfg.llm_ctx_size, chunkChars: cfg.llm_chunk_chars });
       result.summary = await client.summarize(signal, transcriptText);
       await fsPromises.writeFile(path.join(dir, 'summary.md'), result.summary + '\n', 'utf8');
     } catch (e) {
@@ -91,7 +92,7 @@ async function summaryOnly(dir, cfg, signal) {
 
   const result = { summary: '', summaryErr: null };
   try {
-    const client = new AnalyzeClient(cfg.llama_bin, cfg.gemma_model);
+    const client = new AnalyzeClient(cfg.llama_bin, cfg.gemma_model, { temp: cfg.llm_temp, seed: cfg.llm_seed, maxTokens: cfg.llm_max_tokens, ctxSize: cfg.llm_ctx_size, chunkChars: cfg.llm_chunk_chars });
     result.summary = await client.summarize(signal, text);
     await fsPromises.writeFile(path.join(dir, 'summary.md'), result.summary + '\n', 'utf8');
   } catch (e) {

@@ -13,11 +13,12 @@ const pathEls = {
   gemma_model: document.getElementById('path-gemma'),
 };
 
-const inpLanguage  = document.getElementById('inp-language');
-const inpSelfName  = document.getElementById('inp-self-name');
-const chkAuto      = document.getElementById('chk-auto');
-const chkSummarize = document.getElementById('chk-summarize');
-const chkDiarize   = document.getElementById('chk-diarize');
+const inpLanguage     = document.getElementById('inp-language');
+const inpSelfName     = document.getElementById('inp-self-name');
+const inpLlmMaxTokens = document.getElementById('inp-llm-max-tokens');
+const chkAuto         = document.getElementById('chk-auto');
+const chkSummarize    = document.getElementById('chk-summarize');
+const chkDiarize      = document.getElementById('chk-diarize');
 const btnSave      = document.getElementById('btn-save');
 const savedMsg     = document.getElementById('saved-msg');
 
@@ -48,22 +49,24 @@ function render() {
   renderPath('model',       cfg.model);
   renderPath('gemma_model', cfg.gemma_model);
 
-  inpLanguage.value  = cfg.language  ?? 'ru';
-  inpSelfName.value  = cfg.self_name ?? 'Вы';
-  chkAuto.checked      = !!cfg.auto;
-  chkSummarize.checked = !!cfg.summarize;
-  chkDiarize.checked   = !!cfg.diarize;
+  inpLanguage.value     = cfg.language       ?? 'ru';
+  inpSelfName.value     = cfg.self_name      ?? 'Вы';
+  inpLlmMaxTokens.value = cfg.llm_max_tokens ?? 4096;
+  chkAuto.checked       = !!cfg.auto;
+  chkSummarize.checked  = !!cfg.summarize;
+  chkDiarize.checked    = !!cfg.diarize;
 }
 
 function collect() {
   return {
     model:       cfg.model       ?? null,
     gemma_model: cfg.gemma_model ?? null,
-    language:    inpLanguage.value.trim()  || 'ru',
-    self_name:   inpSelfName.value.trim()  || 'Вы',
-    auto:        chkAuto.checked,
-    summarize:   chkSummarize.checked,
-    diarize:     chkDiarize.checked,
+    language:        inpLanguage.value.trim()          || 'ru',
+    self_name:       inpSelfName.value.trim()          || 'Вы',
+    llm_max_tokens:  parseInt(inpLlmMaxTokens.value, 10) || 4096,
+    auto:            chkAuto.checked,
+    summarize:       chkSummarize.checked,
+    diarize:         chkDiarize.checked,
   };
 }
 

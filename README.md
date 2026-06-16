@@ -1,6 +1,6 @@
 # t-scriber
 
-Локальный (privacy-first) транскрибатор встреч Google Meet для macOS. Всё считается на устройстве: аудио и активный спикер берутся из браузера, речь распознаётся `whisper.cpp` (large-v3-turbo, Metal), анализ — Gemma 4 E4B через `llama.cpp`. Данные никуда не уходят за пределы устройства.
+Локальный (privacy-first) транскрибатор встреч Google Meet для macOS. Всё считается на устройстве: аудио и активный спикер берутся из браузера, речь распознаётся `whisper.cpp` (large-v3-turbo, Metal), анализ — Gemma 4 12B через `llama.cpp`. Данные никуда не уходят за пределы устройства.
 
 Целевое железо: **Mac на Apple Silicon**, ≥16 GB RAM
 
@@ -14,7 +14,7 @@
 | Модель | Для чего | Размер | Ссылка |
 |--------|----------|--------|--------|
 | `ggml-large-v3-turbo-q5_0.bin` | Распознавание речи (Whisper) | ~547 MB | [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin) |
-| `gemma-4-E4B-it-Q4_K_M.gguf` | Генерация резюме (Gemma 4) | ~5.3 GB | [HuggingFace](https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf) |
+| `gemma-4-12b-it-IQ4_XS.gguf` | Генерация резюме (Gemma 4 12B) | ~5.9 GB | [HuggingFace](https://huggingface.co/ggml-org/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-IQ4_XS.gguf) |
 
 **3. Укажи пути к моделям в настройках:**
 Открой T-Scriber → **⌘,** (или меню T-Scriber → Настройки…) → укажи пути к скачанным файлам → Сохранить.
@@ -72,7 +72,7 @@ t-scriber/
 │   │   ├── capture.js      # WebSocket-сервер
 │   │   ├── pipeline.js     # Оркестратор: транскрибация → мэппинг → саммари
 │   │   ├── mapping.js      # Атрибуция реплик участникам
-│   │   ├── analyze.js      # LLM (Gemma 4 E4B)
+│   │   ├── analyze.js      # LLM (Gemma 4 12B)
 │   │   ├── transcribe.js   # Обёртка whisper.cpp
 │   │   ├── diarize.js      # Голосовая диаризация (фолбэк для скрытой вкладки)
 │   │   ├── session.js      # Управление файлами сессии

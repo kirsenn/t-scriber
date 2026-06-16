@@ -73,7 +73,7 @@ async function runScenario(fx) {
 
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tscriber-e2e-'));
   const cfg = { ...baseCfg, data_dir: dataDir, summarize: true, language: 'ru',
-    self_name: scn.selfName, llm_temp: 0, llm_seed: 42 };
+    self_name: scn.selfName, llm_temp: 0, llm_seed: 42, whisper_prompt: '' };
 
   const srv = new CaptureServer(dataDir, () => {});
   let capturedDir = null;

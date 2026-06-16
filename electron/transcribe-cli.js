@@ -11,6 +11,7 @@
 const { load: loadConfig } = require('./src/config.js');
 const { process: pipelineProcess, summaryOnly, latestSession } = require('./src/pipeline.js');
 const { render } = require('./src/mapping.js');
+const { openDb, refreshSession: dbRefresh } = require('./src/db.js');
 
 function preScanConfig(argv) {
   for (let i = 0; i < argv.length; i++) {
@@ -88,12 +89,15 @@ async function main() {
     process.exit(1);
   }
 
+  const db = openDb();
+
   if (flags.summaryOnly) {
     let res;
     try { res = await summaryOnly(target, cfg, null); }
     catch (e) { console.error(e.message); process.exit(1); }
 
     if (res.summaryErr) { console.error(`summary failed: ${res.summaryErr.message}`); process.exit(1); }
+    dbRefresh(db, target);
     console.log('\n--- summary ---');
     console.log(res.summary);
     return;
@@ -112,6 +116,9 @@ async function main() {
     console.log('\n--- summary ---');
     console.log(res.summary);
   }
+
+  dbRefresh(db, target);
+  console.log(`\nDB updated: ${target}`);
 }
 
 main();

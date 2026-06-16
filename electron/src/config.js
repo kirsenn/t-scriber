@@ -76,8 +76,13 @@ function defaults() {
       : repoPath('models/ggml-silero-v5.1.2.bin'),
     gemma_model: packaged ? null : repoPath('models/gemma-4-E4B-it-Q4_K_M.gguf'),
     diarize:     true,
+    llm_ctx_size:   65536,
+    llm_chunk_chars: 60000,
+    llm_max_tokens: 4096,
     // diarize_onnx_model defaults to electron/src/diarize/voice-encoder.onnx (in diarize.js);
-    // set it here only to point at a custom voice-encoder export.
+    // whisper_prompt primes Whisper with domain vocabulary so Russian-pronounced English
+    // Override per-project in tscriber.config.json → "whisper_prompt": "your terms here".
+    whisper_prompt: 'IT meeting. Terms: deploy, healthcheck, timeout, one-click, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP.',
   };
 }
 

@@ -211,6 +211,11 @@
             <input class="s-toggle" type="checkbox" id="chk-summarize">
           </div>
           <div class="s-row">
+            <span class="s-label">Макс. токенов</span>
+            <input class="s-input" type="number" id="inp-llm-max-tokens" min="512" max="32768" step="256" placeholder="4096">
+            <span class="s-hint">Для больших моделей (12B+) увеличьте до 8192</span>
+          </div>
+          <div class="s-row">
             <span class="s-label">Диаризация</span>
             <span class="s-hint">Определять голоса участников</span>
             <input class="s-toggle" type="checkbox" id="chk-diarize">

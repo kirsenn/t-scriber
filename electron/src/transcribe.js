@@ -50,6 +50,8 @@ async function run(ctx, pcmPath, workDir, opts) {
 
   if (opts.threads > 0) args.push('-t', String(opts.threads));
 
+  if (opts.prompt) args.push('--prompt', opts.prompt);
+
   if (opts.vadModel) {
     try { fs.statSync(opts.vadModel); args.push('--vad', '--vad-model', opts.vadModel); } catch {}
   }
