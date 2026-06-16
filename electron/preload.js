@@ -4,7 +4,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('tscriber', {
   listSessions:  () => ipcRenderer.invoke('list-sessions'),
   getSession:    id => ipcRenderer.invoke('get-session', id),
-  deleteSession: id => ipcRenderer.invoke('delete-session', id),
+  deleteSession:    id => ipcRenderer.invoke('delete-session', id),
+  reprocessSession: id => ipcRenderer.invoke('reprocess-session', id),
   onEvent: callback => ipcRenderer.on('event', (_, e) => callback(e)),
 
   getConfig:  ()    => ipcRenderer.invoke('get-config'),

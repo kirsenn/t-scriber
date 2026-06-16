@@ -82,7 +82,7 @@ function defaults() {
     // diarize_onnx_model defaults to electron/src/diarize/voice-encoder.onnx (in diarize.js);
     // whisper_prompt primes Whisper with domain vocabulary so Russian-pronounced English
     // Override per-project in tscriber.config.json → "whisper_prompt": "your terms here".
-    whisper_prompt: 'IT meeting. Terms: deploy, healthcheck, timeout, one-click, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP.',
+    whisper_prompt: 'IT meeting. Terms: deploy, healthcheck, timeout, one-click, slack, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP.',
   };
 }
 

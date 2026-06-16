@@ -75,6 +75,7 @@ function avatarStyle(idx) {
 }
 
 const TRASH = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+const REPROCESS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
 
 // -- State --
 let currentSessionId = null;
@@ -93,6 +94,7 @@ function setupEvents() {
     else if (event.type === 'server-started') onServerStarted();
     else if (event.type === 'server-stopped') onServerStopped();
     else if (event.type === 'sessions-changed') onSessionsChanged();
+    else if (event.type === 'log-panel-open') openLogPanel();
   });
 
   document.getElementById('log-toggle').addEventListener('click', () => {
@@ -114,6 +116,15 @@ function onServerStopped() {
   document.getElementById('status-text').textContent = 'Сервер остановлен';
 }
 
+function openLogPanel() {
+  const panel = document.querySelector('.log-panel');
+  const chevron = document.getElementById('log-chevron');
+  if (!panel.classList.contains('log-open')) {
+    panel.classList.add('log-open');
+    chevron.textContent = '▴';
+  }
+}
+
 // -- Log panel --
 const MAX_LOG_LINES = 60;
 
@@ -123,9 +134,12 @@ function appendLog({ level, text, ts }) {
   div.className = `log-line${level ? ' ' + level : ''}`;
   div.innerHTML = `<span class="log-ts">${formatLogTime(ts)}</span><span class="log-msg">${escHtml(text)}</span>`;
   box.appendChild(div);
-  // Trim old lines
   while (box.children.length > MAX_LOG_LINES) box.removeChild(box.firstChild);
   box.scrollTop = box.scrollHeight;
+
+  const lastEl = document.getElementById('log-last');
+  lastEl.textContent = text;
+  lastEl.className = `log-last${level ? ' ' + level : ''}`;
 }
 
 // -- Sessions --
@@ -158,9 +172,13 @@ function renderTable(sessions, highlightIds = []) {
   }
 
   tbody.innerHTML = sessions.map(s => {
-    const participantsHtml = s.participants.map((p, i) =>
-      `<div class="p-row"><div class="avatar" style="${avatarStyle(i)}">${escHtml(initials(p))}</div><span>${escHtml(p)}</span></div>`
-    ).join('');
+    const MAX_P = 4;
+    const shown = s.participants.slice(0, MAX_P);
+    const extra = s.participants.length - MAX_P;
+    const participantsHtml = `<div class="p-pills">`
+      + shown.map((p, i) => `<div class="avatar" style="${avatarStyle(i)}" title="${escHtml(p)}">${escHtml(initials(p))}</div>`).join('')
+      + (extra > 0 ? `<span class="p-extra">+${extra}</span>` : '')
+      + `</div>`;
 
     const isNew = highlightIds.includes(s.id);
 
@@ -172,19 +190,23 @@ function renderTable(sessions, highlightIds = []) {
           <div class="t-title">${escHtml(s.title || '')}</div>
           <div class="t-snippet">${escHtml(s.snippet || '')}</div>
         </td>
-        <td class="cell-del"><button class="btn-del" title="Удалить">${TRASH}</button></td>
+        <td class="cell-del"><div class="cell-btns"><button class="btn-reprocess" title="Перепрогнать">${REPROCESS}</button><button class="btn-del" title="Удалить">${TRASH}</button></div></td>
       </tr>
     `;
   }).join('');
 
   tbody.querySelectorAll('tr[data-id]').forEach(tr => {
     tr.addEventListener('click', e => {
-      if (e.target.closest('.btn-del')) return;
+      if (e.target.closest('.btn-del') || e.target.closest('.btn-reprocess')) return;
       selectRow(tr.dataset.id, tr);
     });
     tr.querySelector('.btn-del').addEventListener('click', e => {
       e.stopPropagation();
       deleteSession(tr.dataset.id);
+    });
+    tr.querySelector('.btn-reprocess').addEventListener('click', e => {
+      e.stopPropagation();
+      reprocessSession(tr.dataset.id);
     });
   });
 }
@@ -262,7 +284,10 @@ function renderDetail(session) {
         <div class="dh-sub">${formatDateLong(session.started_at)}${duration}</div>
         <div class="pills">${pillsHtml}</div>
       </div>
-      <button class="btn-del-lg" id="btn-del-lg">${TRASH} Удалить</button>
+      <div class="dh-actions">
+        <button class="btn-reprocess-lg" id="btn-reprocess-lg">${REPROCESS} Перепрогнать</button>
+        <button class="btn-del-lg" id="btn-del-lg">${TRASH} Удалить</button>
+      </div>
     </div>
     ${bodyHtml}
     ${transcriptHtml}
@@ -272,6 +297,7 @@ function renderDetail(session) {
   if (detailEl) detailEl.scrollTop = scrollTop;
 
   document.getElementById('btn-del-lg').addEventListener('click', () => deleteSession(currentSessionId));
+  document.getElementById('btn-reprocess-lg').addEventListener('click', () => reprocessSession(currentSessionId));
 
   if (segs.length) {
     document.getElementById('tr-toggle').addEventListener('click', () => {
@@ -305,6 +331,11 @@ function toggleTranscript(segs, startMs) {
     chevron.textContent = '▾';
     transcriptOpen = false;
   }
+}
+
+// -- Reprocess --
+async function reprocessSession(id) {
+  await window.tscriber.reprocessSession(id);
 }
 
 // -- Delete --

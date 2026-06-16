@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -88,6 +88,70 @@ ipcMain.handle('get-session', (_, id) => {
     participants: JSON.parse(row.participants || '[]'),
     transcript: JSON.parse(row.transcript || '[]'),
   };
+});
+
+ipcMain.handle('reprocess-session', async (event, id) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question',
+    buttons: ['Отмена', 'Только саммари', 'Транскрибация + саммари'],
+    defaultId: 1,
+    cancelId: 0,
+    message: 'Перепрогнать обработку?',
+    detail: 'Только саммари — быстро, использует уже готовую транскрибацию.\nТранскрибация + саммари — полный перезапуск с нуля.',
+  });
+
+  if (response === 0) return { ok: false };
+
+  const mode = response === 1 ? 'summary' : 'full';
+
+  const row = db.prepare('SELECT dir FROM sessions WHERE id = ?').get(id);
+  if (!row?.dir) return { ok: false, error: 'Сессия не найдена' };
+
+  const { load: loadConfig } = require('./src/config.js');
+  const { process: pipelineProcess, summaryOnly } = require('./src/pipeline.js');
+
+  const { cfg } = loadConfig();
+
+  if (mode === 'full' && (!cfg.model || !fs.existsSync(cfg.model))) {
+    sendLog('error', 'Модель Whisper не задана — укажите путь в настройках (⌘,)');
+    return { ok: false, error: 'no model' };
+  }
+
+  sendToRenderer({ type: 'log-panel-open' });
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30 * 60 * 1000);
+
+  try {
+    if (mode === 'summary') {
+      sendLog('processing', 'Генерация саммари…');
+      const res = await summaryOnly(row.dir, cfg, controller.signal);
+      clearTimeout(timeout);
+      if (res.summaryErr) {
+        sendLog('error', `Ошибка саммари: ${res.summaryErr.message}`);
+        return { ok: false, error: res.summaryErr.message };
+      }
+      sendLog('success', 'Саммари готово');
+    } else {
+      sendLog('processing', 'Транскрибация…');
+      const res = await pipelineProcess(row.dir, cfg, controller.signal);
+      clearTimeout(timeout);
+      sendLog('success', `Транскрибация готова · ${res.dialogue.length} сегментов`);
+      if (res.summaryErr) {
+        sendLog('info', `Резюме пропущено: ${res.summaryErr.message}`);
+      } else if (res.summary) {
+        sendLog('success', 'Резюме готово');
+      }
+    }
+    refreshSession(row.dir);
+    return { ok: true };
+  } catch (e) {
+    clearTimeout(timeout);
+    sendLog('error', e.message);
+    return { ok: false, error: e.message };
+  }
 });
 
 ipcMain.handle('delete-session', async (event, id) => {
@@ -286,6 +350,20 @@ function buildMenu() {
         { role: 'front' },
       ],
     },
+    {
+      label: 'Помощь',
+      submenu: [
+        {
+          label: 'Открыть папку расширения',
+          click() {
+            const extensionPath = app.isPackaged
+              ? path.join(process.resourcesPath, 'extension')
+              : path.join(__dirname, '..', 'extension');
+            shell.openPath(extensionPath);
+          },
+        },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -328,16 +406,14 @@ function createWindow() {
 }
 
 function showExtensionHint(win) {
-  const extensionPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'extension')
-    : path.join(__dirname, '..', 'extension');
   dialog.showMessageBox(win, {
     type: 'info',
     title: 'Установите расширение Chrome',
     message: 'Для записи встреч нужно расширение Chrome.',
     detail:
-      'Откройте Chrome → chrome://extensions → включите «Режим разработчика» → '
-      + '"Загрузить распакованное" → выберите папку:\n\n' + extensionPath,
+      'Откройте меню Помощь → «Открыть папку расширения», затем:\n\n'
+      + 'Chrome → chrome://extensions → включите «Режим разработчика» → '
+      + '"Загрузить распакованное" → выберите открывшуюся папку.',
     buttons: ['Понятно'],
   });
 }
