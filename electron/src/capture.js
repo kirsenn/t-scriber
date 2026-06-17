@@ -67,9 +67,9 @@ class CaptureServer {
 
     switch (msg.type) {
       case 'session_start': {
-        const sess = newSession(this.dataDir, msg.meeting || '');
+        const sess = newSession(this.dataDir, msg.meeting || '', msg.language || 'en');
         this._sessions.set(ws, sess);
-        this._emit('session', `▶ session_start meeting="${msg.meeting}" -> ${sess.dir}`, { meeting: msg.meeting || '' });
+        this._emit('session', `▶ session_start meeting="${msg.meeting}" lang=${msg.language || 'en'} -> ${sess.dir}`, { meeting: msg.meeting || '' });
         break;
       }
       case 'speaker_event': {

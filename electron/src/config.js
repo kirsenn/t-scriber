@@ -58,8 +58,7 @@ function defaults() {
     data_dir:    path.join(os.homedir(), '.tscriber', 'sessions'),
     auto:        true,
     summarize:   true,
-    language:    'ru',
-    self_name:   'Вы',
+    language:    'en',
     threads:     0,
     // Binaries are always bundled inside the app.
     whisper_bin: packaged

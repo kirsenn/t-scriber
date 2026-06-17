@@ -52,6 +52,35 @@ async function parseEvents(filePath) {
   return intervals;
 }
 
+// splitAtBoundaries splits a segment where DOM speaker-change boundaries fall inside it.
+// Returns an array of { startMs, endMs, text } parts, or null if no split is needed.
+// Text is divided proportionally by time, split at the nearest word boundary.
+function splitAtBoundaries(segStart, segEnd, text, intervals) {
+  if (segEnd <= segStart) return null;
+
+  const bSet = new Set();
+  for (const iv of intervals) {
+    if (iv.startMs > segStart && iv.startMs < segEnd) bSet.add(iv.startMs);
+    if (iv.endMs   > segStart && iv.endMs   < segEnd) bSet.add(iv.endMs);
+  }
+  if (bSet.size === 0) return null;
+
+  const cuts     = [...bSet].sort((a, b) => a - b);
+  const words    = text.split(' ');
+  const duration = segEnd - segStart;
+  const times    = [segStart, ...cuts, segEnd];
+  const parts    = [];
+
+  for (let i = 0; i < times.length - 1; i++) {
+    const wFrom    = Math.round(((times[i]     - segStart) / duration) * words.length);
+    const wTo      = Math.round(((times[i + 1] - segStart) / duration) * words.length);
+    const partText = words.slice(wFrom, wTo).join(' ').trim();
+    if (partText) parts.push({ startMs: times[i], endMs: times[i + 1], text: partText });
+  }
+
+  return parts.length > 1 ? parts : null;
+}
+
 // build attributes each track's segments to a speaker and returns the merged,
 // time-sorted dialogue. selfName labels mic-track gaps where DOM attribution failed.
 function build(tracks, intervals, selfName) {
@@ -61,9 +90,13 @@ function build(tracks, intervals, selfName) {
     for (const seg of tr.segments) {
       const start = tr.t0Ms + seg.startMs;
       const end   = tr.t0Ms + seg.endMs;
-      let who = attribute(start, end, intervals);
-      if (who === 'unknown' && tr.source === 'mic' && selfName) who = selfName;
-      out.push({ speaker: who, source: tr.source, startMs: start, endMs: end, text: seg.text });
+      const parts = splitAtBoundaries(start, end, seg.text, intervals);
+      const toAdd = parts ?? [{ startMs: start, endMs: end, text: seg.text }];
+      for (const p of toAdd) {
+        let who = attribute(p.startMs, p.endMs, intervals);
+        if (who === 'unknown' && tr.source === 'mic' && selfName) who = selfName;
+        out.push({ speaker: who, source: tr.source, startMs: p.startMs, endMs: p.endMs, text: p.text });
+      }
     }
   }
 
@@ -113,4 +146,4 @@ function render(segs, originMs) {
   return result.trim();
 }
 
-module.exports = { parseEvents, build, render, MATCH_TOLERANCE_MS };
+module.exports = { parseEvents, build, render, splitAtBoundaries, MATCH_TOLERANCE_MS };

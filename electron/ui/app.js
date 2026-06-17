@@ -77,6 +77,47 @@ function avatarStyle(idx) {
 const TRASH = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 const REPROCESS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
 
+// -- Column resize --
+function initColumnResize() {
+  const cols = document.querySelectorAll('colgroup col');
+  const ths  = document.querySelectorAll('thead th');
+
+  const saved = JSON.parse(localStorage.getItem('col-widths') || '{}');
+  cols.forEach((col, i) => {
+    if (saved[i]) col.style.width = saved[i] + 'px';
+  });
+
+  document.querySelectorAll('th .th-resize').forEach((handle, i) => {
+    let startX, startWidth;
+
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = ths[i].offsetWidth;
+      handle.classList.add('active');
+      document.body.style.cursor = 'col-resize';
+
+      const onMove = e => {
+        const w = Math.max(50, startWidth + e.clientX - startX);
+        cols[i].style.width = w + 'px';
+      };
+
+      const onUp = () => {
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        const widths = JSON.parse(localStorage.getItem('col-widths') || '{}');
+        widths[i] = ths[i].offsetWidth;
+        localStorage.setItem('col-widths', JSON.stringify(widths));
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
 // -- State --
 let currentSessionId = null;
 let transcriptOpen = false;
@@ -86,6 +127,7 @@ let knownIds = new Set();
 window.addEventListener('DOMContentLoaded', () => {
   loadSessions();
   setupEvents();
+  initColumnResize();
 });
 
 function setupEvents() {
@@ -167,7 +209,7 @@ async function onSessionsChanged() {
 function renderTable(sessions, highlightIds = []) {
   const tbody = document.getElementById('tbody');
   if (!sessions.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">Записей нет</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Записей нет</td></tr>';
     return;
   }
 
@@ -185,6 +227,7 @@ function renderTable(sessions, highlightIds = []) {
     return `
       <tr data-id="${escHtml(s.id)}"${s.id === currentSessionId ? ' class="selected"' : isNew ? ' class="new-row"' : ''}>
         <td class="cell-date">${formatDate(s.started_at)}</td>
+        <td class="cell-meeting">${escHtml(s.meeting || '')}</td>
         <td>${participantsHtml}</td>
         <td>
           <div class="t-title">${escHtml(s.title || '')}</div>

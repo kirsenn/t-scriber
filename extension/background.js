@@ -23,9 +23,9 @@ async function ensureOffscreen() {
   });
 }
 
-async function startCapture({ streamId, meeting }) {
+async function startCapture({ streamId, meeting, language }) {
   await ensureOffscreen();
-  const res = await chrome.runtime.sendMessage({ target: "offscreen", cmd: "start", streamId, meeting });
+  const res = await chrome.runtime.sendMessage({ target: "offscreen", cmd: "start", streamId, meeting, language });
   if (!res?.ok) {
     await stopCapture();
     throw new Error(res?.error || "Capture failed");

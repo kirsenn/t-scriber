@@ -1,15 +1,24 @@
 {
-  "addr": "127.0.0.1:8080",
-  "data_dir": "~/.tscriber/sessions",
-  "auto": true,
-  "summarize": true,
-  "language": "ru",
-  "self_name": "Вы",
-  "threads": 0,
+  "addr":        "127.0.0.1:8080",
+  "data_dir":    "~/.tscriber/sessions",
+  "threads":     0,
+
   "whisper_bin": "third_party/whisper.cpp/build/bin/whisper-cli",
-  "model": "models/ggml-large-v3-turbo-q5_0.bin",
-  "vad_model": "models/ggml-silero-v5.1.2.bin",
-  "llama_bin": "third_party/llama.cpp/build/bin/llama-completion",
+  "model":       "models/ggml-large-v3-turbo-q5_0.bin",
+  "vad_model":   "models/ggml-silero-v5.1.2.bin",
+
+  "llama_bin":   "third_party/llama.cpp/build/bin/llama-completion",
   "gemma_model": "models/gemma-4-E4B-it-Q4_K_M.gguf",
-  "diarize": true
+
+  "auto":      true,
+  "summarize": true,
+  "diarize":   true,
+
+  "llm_max_tokens":  4096,
+  "llm_ctx_size":    65536,
+  "llm_chunk_chars": 60000,
+
+  "diarize_onnx_model": "electron/src/diarize/voice-encoder.onnx",
+
+  "whisper_prompt": "IT meeting. Terms: deploy, healthcheck, timeout, one-click, slack, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP."
 }

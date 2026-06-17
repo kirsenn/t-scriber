@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs     = require('node:fs');
 const os     = require('node:os');
 const path   = require('node:path');
-const { parseEvents, build, render, MATCH_TOLERANCE_MS } = require('../src/mapping.js');
+const { parseEvents, build, render, splitAtBoundaries, MATCH_TOLERANCE_MS } = require('../src/mapping.js');
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mapping-test-'));
@@ -80,6 +80,100 @@ test('attribution tolerance: segment starting 300ms before DOM interval is still
   ];
   const segs = build(tracks, intervals, '');
   assert.equal(segs[0].speaker, 'Denis', `got "${segs[0].speaker}", want "Denis" (within tolerance)`);
+});
+
+// --- splitAtBoundaries ---
+
+test('splitAtBoundaries: returns null when no boundary falls inside segment', () => {
+  const intervals = [{ speaker: 'Alice', startMs: 0, endMs: 5000 }];
+  assert.equal(splitAtBoundaries(0, 5000, 'one two three', intervals), null);
+});
+
+test('splitAtBoundaries: splits evenly at midpoint boundary', () => {
+  const intervals = [
+    { speaker: 'Alice', startMs: 0,    endMs: 2000 },
+    { speaker: 'Bob',   startMs: 2000, endMs: 4000 },
+  ];
+  const parts = splitAtBoundaries(0, 4000, 'one two three four', intervals);
+  assert.ok(parts !== null);
+  assert.equal(parts.length, 2);
+  assert.equal(parts[0].startMs, 0);    assert.equal(parts[0].endMs, 2000);
+  assert.equal(parts[1].startMs, 2000); assert.equal(parts[1].endMs, 4000);
+  assert.equal(parts[0].text + ' ' + parts[1].text, 'one two three four');
+});
+
+test('splitAtBoundaries: gap between speakers produces three parts', () => {
+  // Alice 0–1000, gap 1000–3000, Bob 3000–4000
+  const intervals = [
+    { speaker: 'Alice', startMs: 0,    endMs: 1000 },
+    { speaker: 'Bob',   startMs: 3000, endMs: 4000 },
+  ];
+  // 8 words: "a b c d e f g h"
+  // boundaries inside [0,4000]: Alice-end=1000, Bob-start=3000
+  const parts = splitAtBoundaries(0, 4000, 'a b c d e f g h', intervals);
+  assert.ok(parts !== null);
+  assert.equal(parts[0].startMs, 0);
+  assert.equal(parts[parts.length - 1].endMs, 4000);
+  // first part = Alice territory; last part = Bob territory
+  assert.ok(parts[0].text.length > 0);
+  assert.ok(parts[parts.length - 1].text.length > 0);
+});
+
+// --- build with splitting ---
+
+test('build: Whisper segment spanning two back-to-back speakers is split correctly', () => {
+  const intervals = [
+    { speaker: 'Alice', startMs: 0,    endMs: 2000 },
+    { speaker: 'Bob',   startMs: 2000, endMs: 4000 },
+  ];
+  const tracks = [{
+    source: 'tab', t0Ms: 0, segments: [
+      { startMs: 0, endMs: 4000, text: 'alice says this bob replies now' },
+    ],
+  }];
+
+  const segs = build(tracks, intervals, '');
+  assert.equal(segs.length, 2, `got ${segs.length} segments, want 2`);
+  assert.equal(segs[0].speaker, 'Alice');
+  assert.equal(segs[1].speaker, 'Bob');
+  assert.ok(segs[0].text.length > 0, 'Alice part should have text');
+  assert.ok(segs[1].text.length > 0, 'Bob part should have text');
+  assert.equal(segs[0].text + ' ' + segs[1].text, 'alice says this bob replies now');
+});
+
+test('build: short overlap (200ms gap) still splits speakers correctly', () => {
+  // Quick succession: Alice ends at 1800, Bob starts at 2000 — 200ms silence
+  const intervals = [
+    { speaker: 'Alice', startMs: 0,    endMs: 1800 },
+    { speaker: 'Bob',   startMs: 2000, endMs: 4000 },
+  ];
+  const tracks = [{
+    source: 'tab', t0Ms: 0, segments: [
+      { startMs: 0, endMs: 4000, text: 'alice говорит bob отвечает' },
+    ],
+  }];
+
+  const segs = build(tracks, intervals, '');
+  assert.ok(segs.length >= 2, `want ≥2 segments, got ${segs.length}`);
+  assert.equal(segs[0].speaker, 'Alice');
+  assert.equal(segs[segs.length - 1].speaker, 'Bob');
+});
+
+test('build: segment fully within one speaker interval is not split', () => {
+  const intervals = [
+    { speaker: 'Denis', startMs: 0,    endMs: 5000 },
+    { speaker: 'Anna',  startMs: 7000, endMs: 9000 },
+  ];
+  const tracks = [{
+    source: 'tab', t0Ms: 0, segments: [
+      { startMs: 1000, endMs: 4000, text: 'только денис говорит' },
+    ],
+  }];
+
+  const segs = build(tracks, intervals, '');
+  assert.equal(segs.length, 1);
+  assert.equal(segs[0].speaker, 'Denis');
+  assert.equal(segs[0].text, 'только денис говорит');
 });
 
 test('render: consecutive same-speaker lines are merged', () => {

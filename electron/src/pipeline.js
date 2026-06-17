@@ -14,7 +14,7 @@ const { Client: AnalyzeClient } = require('./analyze.js');
 //   transcript.txt  — human-readable text (also LLM input)
 //   summary.md      — Markdown summary (if cfg.summarize is true)
 //
-// cfg: { whisper_bin, model, vad_model, language, threads, self_name, summarize, llama_bin, gemma_model }
+// cfg: { whisper_bin, model, vad_model, language, threads, summarize, llama_bin, gemma_model }
 // Returns { dialogue, originMs, summary, summaryErr }
 async function process(dir, cfg, signal) {
   const opts = {
@@ -45,7 +45,8 @@ async function process(dir, cfg, signal) {
   }
 
   const intervals = await parseEvents(path.join(dir, 'events.jsonl')).catch(() => []);
-  let   dialogue  = build(tracks, intervals, cfg.self_name);
+  const selfName = cfg.language === 'ru' ? 'Вы' : 'You';
+  let   dialogue  = build(tracks, intervals, selfName);
   const origin    = originMs(tracks);
 
   if (cfg.diarize && dialogue.some(s => s.speaker === 'unknown' && s.source === 'tab')) {

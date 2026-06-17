@@ -70,7 +70,7 @@ class Session {
 }
 
 // newSession creates the session directory, writes meta.json, and returns a Session.
-function newSession(dataDir, meeting) {
+function newSession(dataDir, meeting, language) {
   const now = new Date();
   const id  = formatDatetime(now);
   const dir = path.join(dataDir, id);
@@ -79,6 +79,7 @@ function newSession(dataDir, meeting) {
   const meta = {
     id,
     meeting:    meeting || '',
+    language:   language || 'en',
     started_at: now.toISOString(),
     sample_rate: SAMPLE_RATE,
     channels:   1,

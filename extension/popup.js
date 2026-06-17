@@ -6,6 +6,7 @@ const toggle = document.getElementById("toggle");
 const statusEl = document.getElementById("status");
 const dot = document.getElementById("dot");
 const stateLabel = document.getElementById("state-label");
+const langSelect = document.getElementById("lang-select");
 
 function setStatus(text, isErr = false) {
   statusEl.textContent = text;
@@ -18,6 +19,7 @@ function render(recording) {
   dot.className = recording ? "rec" : "";
   stateLabel.className = recording ? "rec" : "";
   stateLabel.textContent = recording ? "Recording" : "Not recording";
+  langSelect.disabled = recording;
 }
 
 async function activeTab() {
@@ -61,6 +63,7 @@ async function start() {
     type: "start",
     streamId,
     meeting: tab.title || tab.url,
+    language: langSelect.value,
   });
   if (!res?.ok) throw new Error(res?.error || "start failed");
   render(true);
@@ -93,8 +96,14 @@ toggle.addEventListener("click", async () => {
   }
 });
 
+langSelect.addEventListener("change", () => {
+  chrome.storage.local.set({ language: langSelect.value });
+});
+
 (async () => {
   try {
+    const { language } = await chrome.storage.local.get({ language: "ru" });
+    langSelect.value = language;
     const { recording } = await chrome.runtime.sendMessage({ type: "status" });
     render(recording);
   } catch (_) {

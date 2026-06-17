@@ -237,6 +237,12 @@ async function startServer() {
       return;
     }
 
+    // Override language from the session's meta.json (set by the extension popup).
+    try {
+      const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
+      if (meta.language) cfg.language = meta.language;
+    } catch {}
+
     sendLog('processing', 'Транскрибация...');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30 * 60 * 1000);

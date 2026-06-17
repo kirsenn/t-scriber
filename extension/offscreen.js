@@ -28,7 +28,7 @@ let nodes = []; // graph nodes to disconnect on stop
 // from content.js will correct it if the user actually is muted.
 let micMuted = false;
 
-function connectWS(meeting) {
+function connectWS(meeting, language) {
   return new Promise((resolve, reject) => {
     let done = false;
     ws = new WebSocket(WS_URL);
@@ -43,7 +43,7 @@ function connectWS(meeting) {
       clearTimeout(deadline);
       done = true;
       wsReady = true;
-      sendJSON({ type: "session_start", meeting: meeting || "", ts: Date.now() });
+      sendJSON({ type: "session_start", meeting: meeting || "", language: language || "en", ts: Date.now() });
       for (const m of pending.splice(0)) ws.send(m);
       console.log("[t-scriber] WS connected");
       resolve();
@@ -129,8 +129,8 @@ async function pipe(stream, source, { playback }) {
   nodes.push(src, worklet);
 }
 
-async function start(streamId, meeting) {
-  await connectWS(meeting);
+async function start(streamId, meeting, language) {
+  await connectWS(meeting, language);
 
   tabStream = await navigator.mediaDevices.getUserMedia({
     audio: {
@@ -182,7 +182,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.target !== "offscreen") return;
   switch (msg.cmd) {
     case "start":
-      start(msg.streamId, msg.meeting)
+      start(msg.streamId, msg.meeting, msg.language)
         .then(() => sendResponse({ ok: true }))
         .catch((e) => sendResponse({ ok: false, error: String(e) }));
       return true; // keep message channel open for async response
