@@ -357,7 +357,17 @@ function toggleTranscript(segs, startMs) {
   const chevron = document.querySelector('.tr-chevron');
 
   if (!transcriptOpen) {
-    box.innerHTML = segs.map(seg => `
+    const merged = [];
+    for (const seg of segs) {
+      const last = merged[merged.length - 1];
+      if (last && last.speaker === seg.speaker && last.source === seg.source) {
+        last.text += ' ' + seg.text;
+        last.endMs = seg.endMs;
+      } else {
+        merged.push({ ...seg });
+      }
+    }
+    box.innerHTML = merged.map(seg => `
       <div class="tr-line">
         <span class="tr-ts">${msToStamp(seg.startMs - startMs)}</span>
         <span class="tr-spk${seg.source === 'mic' ? ' self' : ''}">${escHtml(seg.speaker || '?')}</span>
