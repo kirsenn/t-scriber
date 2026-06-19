@@ -1,6 +1,8 @@
 {
   "name": "t-scriber",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "description": "Local meeting transcription and summarisation",
+  "author": "kirsenn@gmail.com",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,7 +12,7 @@
     "test:e2e": "RUN_E2E=1 node --test test/e2e/*.e2e.js",
     "test:e2e:heavy": "RUN_E2E=1 RUN_E2E_HEAVY=1 node --test test/e2e/transcribe.e2e.js",
     "test:diarize-parity": "node test/e2e/eval/diarize-parity.js",
-    "postinstall": "electron-rebuild && node scripts/fix-electron.js"
+    "postinstall": "electron-builder install-app-deps && node scripts/fix-electron.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.0.0",
