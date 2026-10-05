@@ -6,7 +6,8 @@
 // and a port of silero_vad.utils_vad.get_speech_timestamps_from_probs (with
 // max_speech_duration_s = inf; over-long regions are split here at the quietest frame).
 
-const SAMPLE_RATE = 16000;
+const { SAMPLE_RATE } = require('../../audio.js');
+
 const FRAME = 512;          // samples per VAD frame at 16 kHz
 const CONTEXT = 64;         // trailing samples of the previous frame prefixed to each frame
 const BLOCK_FRAMES = 512;   // frames per ONNX call (~16 s)
@@ -128,4 +129,4 @@ function chunk(regions, probs, opts = {}) {
   return out;
 }
 
-module.exports = { speechProbs, speechTimestamps, chunk, SAMPLE_RATE, FRAME };
+module.exports = { speechProbs, speechTimestamps, chunk, FRAME };

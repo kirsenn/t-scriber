@@ -21,7 +21,7 @@ const WebSocket = require('ws');
 const { CaptureServer } = require('../../src/capture.js');
 const { process: pipelineProcess } = require('../../src/pipeline.js');
 const { load } = require('../../src/config.js');
-const { modelPath } = require('../../src/diarize.js');
+const { modelPath } = require('../../src/diarize');
 const { T0, deriveExpectations, discover } = require('./scenario.js');
 
 const BYTES_PER_MS = 32;

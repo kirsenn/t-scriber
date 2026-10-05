@@ -60,7 +60,7 @@
     "asarUnpack": [
       "**/*.node",
       "**/voice-encoder.onnx",
-      "**/src/gigaam/*.onnx"
+      "**/src/asr/gigaam/*.onnx"
     ],
     "extraResources": [
       {

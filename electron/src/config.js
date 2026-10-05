@@ -74,22 +74,21 @@ function defaults() {
       ? path.join(resources, 'models', 'ggml-silero-v5.1.2.bin')
       : repoPath('models/ggml-silero-v5.1.2.bin'),
     gemma_model: packaged ? null : repoPath('models/gemma-4-E4B-it-Q4_K_M.gguf'),
-    // Recogniser for Russian sessions: 'gigaam' (GigaAM-v3, see src/gigaam.js) or 'whisper'.
-    // Other languages always use Whisper; a missing GigaAM model also falls back to Whisper.
+    // ASR engine for Russian sessions: 'gigaam' or 'whisper' (see src/asr/index.js). Other
+    // languages always use Whisper; a missing GigaAM model also falls back to Whisper.
     asr_ru:      'gigaam',
     gigaam_model_dir: packaged ? null : repoPath('models/gigaam-v3-e2e-rnnt'),
-    gigaam_encoder:   'v3_e2e_rnnt_encoder.onnx',
     gigaam_drop_fillers: true,
     // Extra Cyrillic → Latin term spellings for GigaAM, merged over the defaults in
-    // src/gigaam/text.js, keys are word stems, e.g. { "джир": "Jira" }; a null value disables a default.
-    asr_replacements: {},
+    // src/asr/gigaam/text.js. Keys are word stems, e.g. { "джир": "Jira" }; null disables a default.
+    gigaam_replacements: {},
     diarize:     true,
     llm_ctx_size:   65536,
     llm_chunk_chars: 60000,
     llm_max_tokens: 4096,
-    // diarize_onnx_model defaults to electron/src/diarize/voice-encoder.onnx (in diarize.js);
-    // whisper_prompt primes Whisper with domain vocabulary so Russian-pronounced English
-    // Override per-project in tscriber.config.json → "whisper_prompt": "your terms here".
+    // diarize_onnx_model defaults to electron/src/diarize/voice-encoder.onnx.
+    // whisper_prompt primes Whisper with domain vocabulary so Russian-pronounced English terms
+    // come out in Latin. Override per-project in tscriber.config.json → "whisper_prompt".
     whisper_prompt: 'IT meeting. Terms: deploy, healthcheck, timeout, one-click, slack, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP, Concordium.',
   };
 }
@@ -130,9 +129,6 @@ function load(configPath = null) {
   }
 
   Object.assign(cfg, overrides);
-  // Pre-0.4 key: asr_engine ('whisper'|'gigaam') applied only to Russian anyway.
-  if (overrides.asr_ru === undefined && overrides.asr_engine) cfg.asr_ru = overrides.asr_engine;
-  delete cfg.asr_engine;
 
   for (const key of ['data_dir', 'whisper_bin', 'model', 'vad_model', 'llama_bin', 'gemma_model', 'diarize_onnx_model', 'gigaam_model_dir']) {
     if (cfg[key]) cfg[key] = expandHome(cfg[key]);
@@ -141,4 +137,14 @@ function load(configPath = null) {
   return { cfg, filePath };
 }
 
-module.exports = { load, defaults, repoRoot, repoPath };
+// forSession returns cfg with per-session overrides from <dir>/meta.json applied — the meeting
+// language picked in the extension popup, which also selects the ASR engine.
+function forSession(cfg, dir) {
+  try {
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
+    if (meta.language) return { ...cfg, language: meta.language };
+  } catch {}
+  return cfg;
+}
+
+module.exports = { load, forSession, defaults, repoRoot, repoPath };

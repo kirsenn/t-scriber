@@ -9,7 +9,7 @@ const WORD_SEP = '▁'; // sentencepiece word-start marker
 
 // Default term map: space-separated Cyrillic stems → replacement. Each stem matches a whole
 // word plus up to 3 trailing Cyrillic letters (case endings), so "конкордиуму" → "Concordium".
-// Override or extend via cfg.asr_replacements; a null value disables a default entry.
+// Override or extend via cfg.gigaam_replacements; a null value disables a default entry.
 const DEFAULT_REPLACEMENTS = {
   'конкордиум': 'Concordium',
   'джумио': 'Jumio',
@@ -156,7 +156,7 @@ function applyReplacements(words, matchers) {
 }
 
 // toSegments splits words into sentence-level segments ({ startMs, endMs, text }), the shape
-// transcribe.js returns for Whisper. A segment also ends at a pause longer than maxGapMs.
+// every ASR engine returns. A segment also ends at a pause longer than maxGapMs.
 function toSegments(words, maxGapMs = 1500) {
   const segs = [];
   let cur = [];

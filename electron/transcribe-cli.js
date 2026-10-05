@@ -8,8 +8,10 @@
 //   node transcribe-cli.js --latest                          # most recent
 //   node transcribe-cli.js --latest --summary-only           # just redo summary.md
 //   node transcribe-cli.js --latest --engine whisper         # Russian session via Whisper instead of GigaAM
+//
+// The meeting language comes from the session's meta.json unless --lang is given.
 
-const { load: loadConfig } = require('./src/config.js');
+const { load: loadConfig, forSession } = require('./src/config.js');
 const { process: pipelineProcess, summaryOnly, latestSession } = require('./src/pipeline.js');
 const { render } = require('./src/mapping.js');
 const { openDb, refreshSession: dbRefresh } = require('./src/db.js');
@@ -26,7 +28,7 @@ function preScanConfig(argv) {
 }
 
 function parseArgs(argv, cfg) {
-  const extra = { dir: '', latest: false, summaryOnly: false };
+  const extra = { dir: '', latest: false, summaryOnly: false, lang: false };
   let i = 0;
   while (i < argv.length) {
     const arg = argv[i];
@@ -54,7 +56,7 @@ function parseArgs(argv, cfg) {
       case 'whisper-bin':  cfg.whisper_bin   = val; break;
       case 'model':        cfg.model         = val; break;
       case 'vad':          cfg.vad_model     = val; break;
-      case 'lang':         cfg.language      = val; break;
+      case 'lang':         cfg.language      = val; extra.lang = true; break;
       case 'threads':      cfg.threads       = parseInt(val, 10); break;
       case 'summarize':    cfg.summarize     = val !== 'false'; break;
       case 'llama-bin':    cfg.llama_bin     = val; break;
@@ -75,7 +77,7 @@ async function main() {
   try { loadResult = loadConfig(cfgFilePath); }
   catch (e) { console.error(`config: ${e.message}`); process.exit(1); }
 
-  const cfg   = loadResult.cfg;
+  let   cfg   = loadResult.cfg;
   const flags = parseArgs(argv, cfg);
 
   let target = flags.dir;
@@ -91,6 +93,7 @@ async function main() {
     process.exit(1);
   }
 
+  if (!flags.lang) cfg = forSession(cfg, target);
   const db = openDb();
 
   if (flags.summaryOnly) {

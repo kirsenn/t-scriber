@@ -2,13 +2,8 @@
 
 const test   = require('node:test');
 const assert = require('node:assert/strict');
-const fs     = require('node:fs');
-const os     = require('node:os');
-const path   = require('node:path');
-const text   = require('../src/gigaam/text.js');
-const vad    = require('../src/gigaam/vad.js');
-const { asrEngine } = require('../src/pipeline.js');
-const { load } = require('../src/config.js');
+const text   = require('../src/asr/gigaam/text.js');
+const vad    = require('../src/asr/gigaam/vad.js');
 
 const w = (t, startMs, endMs) => ({ text: t, startMs, endMs });
 
@@ -97,42 +92,4 @@ test('vad.chunk: merges close regions, caps length, cuts at the quietest frame',
   assert.equal(chunks[0].end, dip * 512);
   for (const c of chunks) assert.ok(c.end - c.start <= 20 * sr, JSON.stringify(c));
   assert.equal(chunks[chunks.length - 1].end, 50 * sr);
-});
-
-test('asrEngine: GigaAM for Russian by default, Whisper otherwise or when GigaAM is missing', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gigaam-test-'));
-  for (const f of ['v3_e2e_rnnt_encoder.onnx', 'v3_e2e_rnnt_decoder.onnx', 'v3_e2e_rnnt_joint.onnx', 'v3_e2e_rnnt_vocab.txt']) {
-    fs.writeFileSync(path.join(dir, f), '');
-  }
-  const whisperModel = path.join(dir, 'ggml.bin');
-  fs.writeFileSync(whisperModel, '');
-
-  const base = { gigaam_model_dir: dir, gigaam_encoder: 'v3_e2e_rnnt_encoder.onnx', model: whisperModel };
-
-  const ru = asrEngine({ ...base, language: 'ru' });
-  assert.equal(ru.name, 'gigaam');
-  assert.equal(ru.error, null);
-
-  assert.equal(asrEngine({ ...base, language: 'en' }).name, 'whisper');
-  assert.equal(asrEngine({ ...base, language: 'en' }).note, null);
-  assert.equal(asrEngine({ ...base, language: 'ru', asr_ru: 'whisper' }).name, 'whisper');
-
-  // Missing GigaAM model → Whisper with a note, not a failure.
-  const fallback = asrEngine({ ...base, language: 'ru', gigaam_model_dir: path.join(dir, 'nope') });
-  assert.equal(fallback.name, 'whisper');
-  assert.equal(fallback.error, null);
-  assert.match(fallback.note, /GigaAM/);
-
-  // Nothing usable left → error.
-  const none = asrEngine({ ...base, language: 'ru', gigaam_model_dir: null, model: null });
-  assert.match(none.error, /Whisper/);
-});
-
-test('config: legacy asr_engine maps to asr_ru, asr_ru wins', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gigaam-cfg-'));
-  const write = (o) => { const p = path.join(dir, 'c.json'); fs.writeFileSync(p, JSON.stringify(o)); return p; };
-  assert.equal(load(write({})).cfg.asr_ru, 'gigaam');
-  assert.equal(load(write({ asr_engine: 'whisper' })).cfg.asr_ru, 'whisper');
-  assert.equal(load(write({ asr_engine: 'whisper', asr_ru: 'gigaam' })).cfg.asr_ru, 'gigaam');
-  assert.equal(load(write({ asr_engine: 'gigaam' })).cfg.asr_engine, undefined);
 });

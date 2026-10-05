@@ -59,13 +59,15 @@ just package   # или just build — полная сборка движков 
 
 Движок зависит от языка встречи, выбранного в расширении: русские встречи распознаёт **GigaAM**, все остальные — Whisper. Для русского можно вернуть Whisper в настройках (⌘, → «Русский») или ключом `asr_ru: "whisper"`. Если файлов модели GigaAM нет, встреча распознаётся Whisper, а в лог пишется предупреждение.
 
-**GigaAM-v3** (Сбер, MIT) — модель только для русского языка. На наших встречах она распознаёт разговорную речь заметно точнее Whisper, не зацикливается на повторах и работает примерно втрое быстрее (час записи — ~45 с на M4 Pro, CPU). Работает на чистом JS через `onnxruntime-node` в worker-потоке, как и диаризация ([src/gigaam/](electron/src/gigaam/)):
+**GigaAM-v3** (Сбер, MIT) — модель только для русского языка. На наших встречах она распознаёт разговорную речь заметно точнее Whisper, не зацикливается на повторах и работает примерно втрое быстрее (час записи — ~45 с на M4 Pro, CPU). Работает на чистом JS через `onnxruntime-node` в worker-потоке, как и диаризация ([src/asr/gigaam/](electron/src/asr/gigaam/)):
 
 - Silero VAD режет дорожку на куски до 20 с (`silero-vad.onnx`, закоммичен);
 - лог-mel фронтенд (`frontend.onnx`, закоммичен, генерируется `scripts/export-gigaam-frontend.py`) → энкодер → жадный RNNT-декодинг с пословными таймкодами;
 - реплики режутся по предложениям, а не по минутным кускам, как у Whisper, — точнее атрибуция спикеров.
 
-Отличия от Whisper, которые закрывает постобработка: GigaAM пишет английские термины кириллицей («конкордиум», «флаттер») и дословно записывает «э-э». Междометия вырезаются (`gigaam_drop_fillers`, по умолчанию `true`), а термины меняются по словарю: встроенный список в [text.js](electron/src/gigaam/text.js) дополняется ключом `asr_replacements` — основа слова → замена, например `{"джир": "Jira"}` (`null` отключает встроенную замену). `whisper_prompt` на GigaAM не влияет.
+Каждый движок — отдельная папка в [src/asr/](electron/src/asr/) с одинаковым интерфейсом (`options`, `missing`, `run`), выбор по языку — в [src/asr/index.js](electron/src/asr/index.js). Новый движок добавляется папкой и строкой в этом файле.
+
+Отличия от Whisper, которые закрывает постобработка: GigaAM пишет английские термины кириллицей («конкордиум», «флаттер») и дословно записывает «э-э». Междометия вырезаются (`gigaam_drop_fillers`, по умолчанию `true`), а термины меняются по словарю: встроенный список в [text.js](electron/src/asr/gigaam/text.js) дополняется ключом `gigaam_replacements` — основа слова → замена, например `{"джир": "Jira"}` (`null` отключает встроенную замену). `whisper_prompt` на GigaAM не влияет.
 
 ## Диаризация
 
@@ -84,14 +86,17 @@ t-scriber/
 │   ├── src/                # Бэкенд-логика
 │   │   ├── capture.js      # WebSocket-сервер
 │   │   ├── pipeline.js     # Оркестратор: транскрибация → мэппинг → саммари
+│   │   ├── asr/            # Распознавание речи
+│   │   │   ├── index.js    # Выбор движка по языку встречи
+│   │   │   ├── whisper/    # whisper.cpp (подпроцесс whisper-cli)
+│   │   │   └── gigaam/     # GigaAM-v3: worker, VAD, RNNT, постобработка
+│   │   ├── diarize/        # Голосовая диаризация (фолбэк для скрытой вкладки)
 │   │   ├── mapping.js      # Атрибуция реплик участникам
 │   │   ├── analyze.js      # LLM (Gemma 4 12B)
-│   │   ├── transcribe.js   # Обёртка whisper.cpp
-│   │   ├── gigaam.js       # Движок GigaAM-v3 (worker, VAD, RNNT, постобработка в gigaam/)
-│   │   ├── diarize.js      # Голосовая диаризация (фолбэк для скрытой вкладки)
 │   │   ├── session.js      # Управление файлами сессии
 │   │   ├── config.js       # Загрузка конфига
-│   │   └── wav.js          # PCM ↔ WAV
+│   │   ├── audio.js        # Формат PCM-дорожек (16 кГц, моно, int16)
+│   │   └── util.js         # Общие хелперы: worker-потоки с отменой, пути моделей
 │   ├── ui/                 # Рендерер (ванильный JS, без фреймворка)
 │   │   ├── index.html
 │   │   ├── style.css
@@ -103,8 +108,7 @@ t-scriber/
 ├── scripts/
 │   ├── setup-models.sh         # Сборка движков + скачивание моделей
 │   ├── export-voice-encoder.py # Build-tool: регенерация voice-encoder.onnx
-│   ├── export-gigaam-frontend.py # Build-tool: регенерация gigaam/frontend.onnx
-│   └── gigaam-compare/         # Прототип и сравнение GigaAM vs Whisper на сессиях
+│   └── export-gigaam-frontend.py # Build-tool: регенерация asr/gigaam/frontend.onnx
 └── tscriber.config.example.json
 ```
 
@@ -118,7 +122,7 @@ cp tscriber.config.example.json tscriber.config.json
 ```
 Поиск конфига при запуске: `$TSCRIBER_CONFIG` → `./tscriber.config.json` (в корне репо) → `~/.tscriber/config.json`. Пути с `~/` разворачиваются.
 
-Ключи: `addr`, `data_dir`, `auto`, `summarize`, `language`, `threads`, `whisper_bin`, `model`, `vad_model`, `llama_bin`, `gemma_model`, `diarize`, `asr_ru`, `gigaam_model_dir`, `gigaam_encoder`, `gigaam_drop_fillers`, `asr_replacements` (см. [Распознавание](#распознавание-whisper-или-gigaam)).
+Ключи: `addr`, `data_dir`, `auto`, `summarize`, `language`, `threads`, `whisper_bin`, `model`, `vad_model`, `llama_bin`, `gemma_model`, `diarize`, `asr_ru`, `gigaam_model_dir`, `gigaam_drop_fillers`, `gigaam_replacements` (см. [Распознавание](#распознавание-whisper-или-gigaam)).
 
 Реплики с mic-дорожки без speaker-события подписываются как «Вы» (или «You» для нерусских встреч).
 

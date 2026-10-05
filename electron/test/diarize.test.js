@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs     = require('node:fs');
 const os     = require('node:os');
 const path   = require('node:path');
-const { run } = require('../src/diarize.js');
+const { run } = require('../src/diarize');
 const { l2normalize, buildCentroids, matchToCentroid, agglomerativeCosine } =
   require('../src/diarize/cluster.js');
 
@@ -48,7 +48,7 @@ test('diarize.run: unchanged when no unknowns exist', async () => {
     { sp: 'Анна', startMs: 0, endMs: 3000 },
     { sp: 'Борис', startMs: 4000, endMs: 7000 },
   ]);
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: fakeEmbedder({}) });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: fakeEmbedder({}) });
   assert.deepEqual(result, dialogue);
 });
 
@@ -58,7 +58,7 @@ test('diarize.run: unchanged when all tab segments are unknown', async () => {
     { sp: 'unknown', startMs: 0, endMs: 3000 },
     { sp: 'unknown', startMs: 4000, endMs: 7000 },
   ]);
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: fakeEmbedder({}) });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: fakeEmbedder({}) });
   assert.deepEqual(result, dialogue);
 });
 
@@ -68,7 +68,7 @@ test('diarize.run: unchanged when unknowns are mic-only', async () => {
     { speaker: 'Анна',    source: 'tab', startMs: 0,    endMs: 3000, text: 'a' },
     { speaker: 'unknown', source: 'mic', startMs: 4000, endMs: 6000, text: 'b' },
   ];
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: fakeEmbedder({}) });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: fakeEmbedder({}) });
   assert.deepEqual(result, dialogue);
 });
 
@@ -88,7 +88,7 @@ test('diarize.run: matches unknowns to nearest anchor centroid', async () => {
     5000: [0.98, 0.02, 0, 0],
     7500: [0.01, 0.99, 0, 0],
   });
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: embedder });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: embedder });
   assert.equal(result[0].speaker, 'Анна');
   assert.equal(result[1].speaker, 'Борис');
   assert.equal(result[2].speaker, 'Анна',  'unknown[0] → Anna');
@@ -102,7 +102,7 @@ test('diarize.run: an unknown below threshold becomes unknown_speaker_0', async 
     { sp: 'unknown', startMs: 3000, endMs: 5000 }, // orthogonal to Anna → no match
   ]);
   const embedder = fakeEmbedder({ 0: [1, 0, 0, 0], 3000: [0, 0, 1, 0] });
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: embedder });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: embedder });
   assert.equal(result[1].speaker, 'unknown_speaker_0');
 });
 
@@ -120,7 +120,7 @@ test('diarize.run: two distinct unmatched clusters → unknown_speaker_0 / _1 by
     6000: [0, 0, 1, 0],
     9000: [0, 0.98, 0.02, 0],
   });
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: embedder });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: embedder });
   assert.equal(result[1].speaker, 'unknown_speaker_0');
   assert.equal(result[2].speaker, 'unknown_speaker_1');
   assert.equal(result[3].speaker, 'unknown_speaker_0', 'third clusters with the first');
@@ -133,7 +133,7 @@ test('diarize.run: a too-short (null) unknown becomes unknown_speaker_0', async 
     { sp: 'unknown', startMs: 3000, endMs: 3100 }, // null embed
   ]);
   const embedder = fakeEmbedder({ 0: [1, 0, 0, 0] }); // 3000 missing → null
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: embedder });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: embedder });
   assert.equal(result[1].speaker, 'unknown_speaker_0');
 });
 
@@ -144,7 +144,7 @@ test('diarize.run: no usable anchor embeddings → all unknowns become unknown_s
     { sp: 'unknown', startMs: 3000, endMs: 5000 },
   ]);
   const embedder = fakeEmbedder({ 3000: [1, 0, 0, 0] }); // anchor (0) missing → no centroids
-  const result = await run(null, pcm, dir, dialogue, { _embedderOverride: embedder });
+  const result = await run(null, pcm, dialogue, { _embedderOverride: embedder });
   assert.equal(result[1].speaker, 'unknown_speaker_0');
 });
 

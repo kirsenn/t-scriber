@@ -1,10 +1,9 @@
 'use strict';
 
-// Wraps a raw 16 kHz mono signed-16-bit-LE PCM file in a 44-byte WAV header.
+// Wraps a session PCM track in a 44-byte WAV header — whisper-cli reads WAV only.
 
 const fs = require('node:fs');
-
-const SAMPLE_RATE = 16000;
+const { SAMPLE_RATE } = require('../../audio.js');
 
 // Builds the exact 44-byte WAV header for mono 16-bit PCM @ 16 kHz.
 function buildWAVHeader(dataLen) {
@@ -50,4 +49,4 @@ function pcmToWAV(pcmPath, wavPath) {
   });
 }
 
-module.exports = { pcmToWAV, buildWAVHeader, SAMPLE_RATE };
+module.exports = { pcmToWAV };

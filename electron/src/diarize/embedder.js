@@ -10,11 +10,10 @@
 // it is deliberately omitted — the parity harness showed JS-vs-reference cosine stays
 // >0.99 without it (see test/e2e/eval/diarize-parity.js).
 
-const fs = require('node:fs');
 const { melSpectrogram, N_MELS } = require('./mel.js');
 const { l2normalize, mean } = require('./cluster.js');
+const { SAMPLE_RATE } = require('../audio.js');
 
-const SAMPLE_RATE = 16000;
 const MIN_SEGMENT_SAMPLES = SAMPLE_RATE / 5; // 200 ms — shorter slices give noisy embeddings
 const INT16_MAX = 32767;                     // resemblyzer normalize_volume uses 2^15 - 1
 const TARGET_DBFS = -30;
@@ -29,16 +28,6 @@ let ort = null; // lazy require so non-diarize code paths never load the native 
 
 function msToSamples(ms) {
   return Math.trunc((ms * SAMPLE_RATE) / 1000);
-}
-
-// loadAudioPcm reads a raw 16 kHz mono int16-LE PCM file as Float32 in [-1, 1), matching
-// soundfile.read(dtype='float32') which divides int16 by 32768.
-function loadAudioPcm(pcmPath) {
-  const buf = fs.readFileSync(pcmPath);
-  const n = buf.length >> 1;
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) out[i] = buf.readInt16LE(i * 2) / 32768;
-  return out;
 }
 
 // normalizeVolume — resemblyzer normalize_volume(target=-30 dBFS, increase_only=True).
@@ -129,4 +118,4 @@ class VoiceEmbedder {
   }
 }
 
-module.exports = { VoiceEmbedder, loadAudioPcm, normalizeVolume, computePartialSlices, msToSamples, MIN_SEGMENT_SAMPLES };
+module.exports = { VoiceEmbedder, normalizeVolume, computePartialSlices, msToSamples, MIN_SEGMENT_SAMPLES };

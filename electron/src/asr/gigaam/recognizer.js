@@ -14,37 +14,34 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseVocab, tokensToWords } = require('./text.js');
-const { unpackedPath } = require('../util.js');
+const { unpackedPath } = require('../../util.js');
+const { SAMPLE_RATE } = require('../../audio.js');
 
 const FRONTEND = unpackedPath(path.join(__dirname, 'frontend.onnx'));
-const SAMPLE_RATE = 16000;
 const MIN_SAMPLES = 320 + 160 * 8; // a few encoder frames; shorter chunks are skipped
 const ENC_DIM = 768;
 const PRED_DIM = 320;
 const MAX_SYMBOLS_PER_FRAME = 10;
 
 const MODEL_FILES = {
+  encoder: 'v3_e2e_rnnt_encoder.onnx',
   decoder: 'v3_e2e_rnnt_decoder.onnx',
   joint:   'v3_e2e_rnnt_joint.onnx',
   vocab:   'v3_e2e_rnnt_vocab.txt',
 };
-const DEFAULT_ENCODER = 'v3_e2e_rnnt_encoder.onnx';
 
 // modelFiles lists the files a model dir must contain, for validation and error messages.
-function modelFiles(modelDir, encoder = DEFAULT_ENCODER) {
-  return {
-    encoder: path.join(modelDir, encoder),
-    decoder: path.join(modelDir, MODEL_FILES.decoder),
-    joint:   path.join(modelDir, MODEL_FILES.joint),
-    vocab:   path.join(modelDir, MODEL_FILES.vocab),
-  };
+function modelFiles(modelDir) {
+  const out = {};
+  for (const [k, f] of Object.entries(MODEL_FILES)) out[k] = path.join(modelDir, f);
+  return out;
 }
 
 class Recognizer {
   // ort is the onnxruntime-node module (injected so tests and the worker share one copy).
   constructor(ort, modelDir, opts = {}) {
     this.ort = ort;
-    this.files = modelFiles(modelDir, opts.encoder || DEFAULT_ENCODER);
+    this.files = modelFiles(modelDir);
     this.threads = opts.threads || 0;
   }
 
@@ -135,4 +132,4 @@ function argmax(a) {
   return best;
 }
 
-module.exports = { Recognizer, modelFiles, DEFAULT_ENCODER, FRONTEND };
+module.exports = { Recognizer, modelFiles };

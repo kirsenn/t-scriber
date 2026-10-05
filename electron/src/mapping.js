@@ -1,6 +1,6 @@
 'use strict';
 
-// Merges DOM-derived speaker events with whisper segments into a labeled dialogue.
+// Merges DOM-derived speaker events with ASR segments into a labeled dialogue.
 
 const fs = require('node:fs');
 const readline = require('node:readline');

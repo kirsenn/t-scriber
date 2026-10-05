@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exports the GigaAM-v3 log-mel front-end to ONNX for the JS ASR engine (electron/src/gigaam/).
+"""Exports the GigaAM-v3 log-mel front-end to ONNX for the JS ASR engine (electron/src/asr/gigaam/).
 
 The published GigaAM ONNX encoders (huggingface.co/istupakov/gigaam-v3-onnx) take log-mel
 features, not audio, and torchaudio's MelSpectrogram does not export cleanly. This rebuilds
@@ -12,8 +12,12 @@ DFT kernels — and checks it against gigaam's own FeatureExtractor before writi
 Inputs:  wav [B, N] float32 in [-1, 1), length [B] int64 (valid samples per row)
 Outputs: features [B, 64, T] float32, feature_lengths [B] int64  (T = (N - 320) // 160 + 1)
 
-One-off, needs a throwaway env with torch + torchaudio + gigaam (see scripts/gigaam-compare/README.md):
-  python scripts/export-gigaam-frontend.py [out.onnx]
+One-off, needs a throwaway env with torch + torchaudio + gigaam. GigaAM's PyPI release pins an old
+torch, so install it from source with the onnx pins relaxed:
+  python3 -m venv .venv && git clone --depth 1 https://github.com/salute-developers/GigaAM.git
+  sed -i '' -e 's/"onnx==1.19.\*"/"onnx"/' -e 's/"onnxruntime==1.23.\*"/"onnxruntime"/' GigaAM/pyproject.toml
+  .venv/bin/pip install -e "./GigaAM[torch]"
+  .venv/bin/python scripts/export-gigaam-frontend.py [out.onnx]
 """
 import math
 import sys
@@ -26,7 +30,7 @@ from torch import nn
 SR, N_FFT, HOP, N_MELS = 16000, 320, 160, 64
 N_BINS = N_FFT // 2 + 1
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else \
-    Path(__file__).resolve().parent.parent / "electron" / "src" / "gigaam" / "frontend.onnx"
+    Path(__file__).resolve().parent.parent / "electron" / "src" / "asr" / "gigaam" / "frontend.onnx"
 
 
 class Frontend(nn.Module):

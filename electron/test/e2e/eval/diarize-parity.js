@@ -15,9 +15,10 @@ const os = require('node:os');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const { VoiceEmbedder, loadAudioPcm } = require('../../../src/diarize/embedder.js');
+const { VoiceEmbedder } = require('../../../src/diarize/embedder.js');
 const { classify } = require('../../../src/diarize/classify.js');
-const { modelPath } = require('../../../src/diarize.js');
+const { modelPath } = require('../../../src/diarize');
+const { loadAudioPcm } = require('../../../src/audio.js');
 
 const FIXTURE = path.join(__dirname, '..', '..', 'fixtures', 'e2e', 'diarize-hidden-tab');
 const MODEL = modelPath({});
