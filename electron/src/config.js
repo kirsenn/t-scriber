@@ -74,6 +74,15 @@ function defaults() {
       ? path.join(resources, 'models', 'ggml-silero-v5.1.2.bin')
       : repoPath('models/ggml-silero-v5.1.2.bin'),
     gemma_model: packaged ? null : repoPath('models/gemma-4-E4B-it-Q4_K_M.gguf'),
+    // Recogniser for Russian sessions: 'gigaam' (GigaAM-v3, see src/gigaam.js) or 'whisper'.
+    // Other languages always use Whisper; a missing GigaAM model also falls back to Whisper.
+    asr_ru:      'gigaam',
+    gigaam_model_dir: packaged ? null : repoPath('models/gigaam-v3-e2e-rnnt'),
+    gigaam_encoder:   'v3_e2e_rnnt_encoder.onnx',
+    gigaam_drop_fillers: true,
+    // Extra Cyrillic → Latin term spellings for GigaAM, merged over the defaults in
+    // src/gigaam/text.js, keys are word stems, e.g. { "джир": "Jira" }; a null value disables a default.
+    asr_replacements: {},
     diarize:     true,
     llm_ctx_size:   65536,
     llm_chunk_chars: 60000,
@@ -121,8 +130,11 @@ function load(configPath = null) {
   }
 
   Object.assign(cfg, overrides);
+  // Pre-0.4 key: asr_engine ('whisper'|'gigaam') applied only to Russian anyway.
+  if (overrides.asr_ru === undefined && overrides.asr_engine) cfg.asr_ru = overrides.asr_engine;
+  delete cfg.asr_engine;
 
-  for (const key of ['data_dir', 'whisper_bin', 'model', 'vad_model', 'llama_bin', 'gemma_model', 'diarize_onnx_model']) {
+  for (const key of ['data_dir', 'whisper_bin', 'model', 'vad_model', 'llama_bin', 'gemma_model', 'diarize_onnx_model', 'gigaam_model_dir']) {
     if (cfg[key]) cfg[key] = expandHome(cfg[key]);
   }
 

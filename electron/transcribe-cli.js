@@ -7,6 +7,7 @@
 //   node transcribe-cli.js --dir ~/.tscriber/sessions/<ts>   # one session
 //   node transcribe-cli.js --latest                          # most recent
 //   node transcribe-cli.js --latest --summary-only           # just redo summary.md
+//   node transcribe-cli.js --latest --engine whisper         # Russian session via Whisper instead of GigaAM
 
 const { load: loadConfig } = require('./src/config.js');
 const { process: pipelineProcess, summaryOnly, latestSession } = require('./src/pipeline.js');
@@ -54,11 +55,12 @@ function parseArgs(argv, cfg) {
       case 'model':        cfg.model         = val; break;
       case 'vad':          cfg.vad_model     = val; break;
       case 'lang':         cfg.language      = val; break;
-      case 'self':         cfg.self_name     = val; break;
       case 'threads':      cfg.threads       = parseInt(val, 10); break;
       case 'summarize':    cfg.summarize     = val !== 'false'; break;
       case 'llama-bin':    cfg.llama_bin     = val; break;
       case 'gemma':        cfg.gemma_model   = val; break;
+      case 'engine':       cfg.asr_ru        = val; break;
+      case 'gigaam':       cfg.gigaam_model_dir = val; break;
     }
     i++;
   }

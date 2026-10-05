@@ -63,10 +63,18 @@ ipcMain.handle('save-config', (_, overrides) => {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2) + '\n');
 });
 
-ipcMain.handle('choose-file', async (event, { filters = [] } = {}) => {
+// Returns the GigaAM model files missing from dir (basenames), empty when the folder is usable.
+ipcMain.handle('check-gigaam-dir', (_, dir) => {
+  const { load } = require('./src/config.js');
+  const { missingFiles } = require('./src/gigaam.js');
+  if (!dir) return ['папка не указана'];
+  return missingFiles({ modelDir: dir, encoder: load().cfg.gigaam_encoder }).map(f => path.basename(f));
+});
+
+ipcMain.handle('choose-file', async (event, { filters = [], directory = false } = {}) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    properties: ['openFile'],
+    properties: [directory ? 'openDirectory' : 'openFile'],
     filters,
   });
   return canceled ? null : filePaths[0];
@@ -110,14 +118,20 @@ ipcMain.handle('reprocess-session', async (event, id) => {
   if (!row?.dir) return { ok: false, error: 'Сессия не найдена' };
 
   const { load: loadConfig } = require('./src/config.js');
-  const { process: pipelineProcess, summaryOnly } = require('./src/pipeline.js');
+  const { process: pipelineProcess, summaryOnly, asrEngine } = require('./src/pipeline.js');
 
   const { cfg } = loadConfig();
+  try {
+    const meta = JSON.parse(fs.readFileSync(path.join(row.dir, 'meta.json'), 'utf8'));
+    if (meta.language) cfg.language = meta.language;
+  } catch {}
 
-  if (mode === 'full' && (!cfg.model || !fs.existsSync(cfg.model))) {
-    sendLog('error', 'Модель Whisper не задана — укажите путь в настройках (⌘,)');
+  const asr = mode === 'full' ? asrEngine(cfg) : {};
+  if (asr.error) {
+    sendLog('error', asr.error);
     return { ok: false, error: 'no model' };
   }
+  if (asr.note) sendLog('info', asr.note);
 
   sendToRenderer({ type: 'log-panel-open' });
 
@@ -138,7 +152,7 @@ ipcMain.handle('reprocess-session', async (event, id) => {
       sendLog('processing', 'Транскрибация…');
       const res = await pipelineProcess(row.dir, cfg, controller.signal);
       clearTimeout(timeout);
-      sendLog('success', `Транскрибация готова · ${res.dialogue.length} сегментов`);
+      sendLog('success', `Транскрибация готова (${res.engine === 'gigaam' ? 'GigaAM' : 'Whisper'}) · ${res.dialogue.length} сегментов`);
       if (res.summaryErr) {
         sendLog('info', `Резюме пропущено: ${res.summaryErr.message}`);
       } else if (res.summary) {
@@ -216,7 +230,7 @@ function onServerEvent({ type, msg, meeting }) {
 async function startServer() {
   const { load: loadConfig } = require('./src/config.js');
   const { CaptureServer } = require('./src/capture.js');
-  const { process: pipelineProcess } = require('./src/pipeline.js');
+  const { process: pipelineProcess, asrEngine } = require('./src/pipeline.js');
 
   // Use initial config only for server address + data dir.
   const { cfg: initialCfg } = loadConfig();
@@ -232,16 +246,18 @@ async function startServer() {
 
     if (!cfg.auto) return;
 
-    if (!cfg.model || !fs.existsSync(cfg.model)) {
-      sendLog('error', 'Модель Whisper не задана — укажите путь в настройках (⌘,)');
-      return;
-    }
-
     // Override language from the session's meta.json (set by the extension popup).
     try {
       const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
       if (meta.language) cfg.language = meta.language;
     } catch {}
+
+    const asr = asrEngine(cfg);
+    if (asr.error) {
+      sendLog('error', asr.error);
+      return;
+    }
+    if (asr.note) sendLog('info', asr.note);
 
     sendLog('processing', 'Транскрибация...');
     const controller = new AbortController();
@@ -254,7 +270,7 @@ async function startServer() {
         sendLog('info', 'Ничего не записано');
         return;
       }
-      sendLog('success', `Транскрибация готова · ${res.dialogue.length} сегментов`);
+      sendLog('success', `Транскрибация готова (${res.engine === 'gigaam' ? 'GigaAM' : 'Whisper'}) · ${res.dialogue.length} сегментов`);
       refreshSession(dir);
       if (res.summaryErr) {
         sendLog('info', 'Резюме пропущено');

@@ -7,6 +7,9 @@
   "model":       "models/ggml-large-v3-turbo-q5_0.bin",
   "vad_model":   "models/ggml-silero-v5.1.2.bin",
 
+  "asr_ru":           "gigaam",
+  "gigaam_model_dir": "models/gigaam-v3-e2e-rnnt",
+
   "llama_bin":   "third_party/llama.cpp/build/bin/llama-completion",
   "gemma_model": "models/gemma-4-E4B-it-Q4_K_M.gguf",
 

@@ -10,14 +10,18 @@ let cfg = {};  // current values (shown in UI)
 
 const pathEls = {
   model:       document.getElementById('path-model'),
+  gigaam_model_dir: document.getElementById('path-gigaam'),
   gemma_model: document.getElementById('path-gemma'),
 };
 
 
+const selAsrRu        = document.getElementById('sel-asr-ru');
 const inpLlmMaxTokens = document.getElementById('inp-llm-max-tokens');
 const chkAuto         = document.getElementById('chk-auto');
 const chkSummarize    = document.getElementById('chk-summarize');
 const chkDiarize      = document.getElementById('chk-diarize');
+const rowGigaam    = document.getElementById('row-gigaam');
+const gigaamError  = document.getElementById('gigaam-error');
 const btnSave      = document.getElementById('btn-save');
 const savedMsg     = document.getElementById('saved-msg');
 
@@ -46,17 +50,43 @@ function renderPath(field, value) {
 
 function render() {
   renderPath('model',       cfg.model);
+  renderPath('gigaam_model_dir', cfg.gigaam_model_dir);
   renderPath('gemma_model', cfg.gemma_model);
 
+  selAsrRu.value        = cfg.asr_ru === 'whisper' ? 'whisper' : 'gigaam';
   inpLlmMaxTokens.value = cfg.llm_max_tokens ?? 4096;
   chkAuto.checked       = !!cfg.auto;
   chkSummarize.checked  = !!cfg.summarize;
   chkDiarize.checked    = !!cfg.diarize;
 }
 
+// validate blocks saving while GigaAM is chosen for Russian but its model folder is not set
+// or lacks the model files; the folder row is highlighted with a hint.
+let valid = true;
+let saving = false;
+
+async function validate() {
+  let error = null;
+  if (selAsrRu.value === 'gigaam') {
+    const missing = await tscriber.checkGigaamDir(cfg.gigaam_model_dir ?? null);
+    if (missing.length) {
+      error = cfg.gigaam_model_dir
+        ? `В папке нет файлов модели GigaAM: ${missing.join(', ')}. Укажите папку, где лежит модель.`
+        : 'Для русского выбран GigaAM — укажите папку, где лежит модель (кнопка «Папка…»).';
+    }
+  }
+  valid = !error;
+  rowGigaam.classList.toggle('invalid', !valid);
+  gigaamError.textContent = error || '';
+  gigaamError.hidden = valid;
+  btnSave.disabled = saving || !valid;
+}
+
 function collect() {
   return {
+    asr_ru:      selAsrRu.value,
     model:       cfg.model       ?? null,
+    gigaam_model_dir: cfg.gigaam_model_dir ?? null,
     gemma_model: cfg.gemma_model ?? null,
     llm_max_tokens:  parseInt(inpLlmMaxTokens.value, 10) || 4096,
     auto:            chkAuto.checked,
@@ -76,16 +106,22 @@ document.querySelectorAll('.s-btn-pick').forEach(btn => {
   btn.addEventListener('click', async () => {
     const field  = btn.dataset.field;
     const filter = filterMap[btn.dataset.filter] ?? [];
-    const picked = await tscriber.chooseFile({ filters: filter });
+    const picked = await tscriber.chooseFile({ filters: filter, directory: !!btn.dataset.directory });
     if (!picked) return;
     cfg[field] = picked;
     renderPath(field, picked);
+    validate();
   });
 });
+
+selAsrRu.addEventListener('change', validate);
 
 // ── save ──────────────────────────────────────────────────────────────────────
 
 btnSave.addEventListener('click', async () => {
+  await validate();
+  if (!valid) return;
+  saving = true;
   btnSave.disabled = true;
   const values = collect();
   await tscriber.saveConfig(values);
@@ -93,7 +129,8 @@ btnSave.addEventListener('click', async () => {
   savedMsg.classList.add('visible');
   setTimeout(() => {
     savedMsg.classList.remove('visible');
-    btnSave.disabled = false;
+    saving = false;
+    btnSave.disabled = !valid;
   }, 2000);
 });
 
@@ -102,4 +139,5 @@ btnSave.addEventListener('click', async () => {
 (async () => {
   cfg = await tscriber.getConfig();
   render();
+  validate();
 })();

@@ -15,13 +15,15 @@ const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const { loadAudioPcm } = require('./diarize/embedder.js');
 const { classify } = require('./diarize/classify.js');
+const { unpackedPath } = require('./util.js');
 
 // Tuned thresholds (ported from the original resemblyzer pipeline) — keep in sync with
 // test/e2e/eval/diarize-parity.js.
 const MATCH_THRESHOLD = 0.62; // cosine: above → matched to a known centroid
 const CLUSTER_CUT     = 0.45; // average-linkage cosine-distance cut for new speakers
 
-const DEFAULT_MODEL = path.join(__dirname, 'diarize', 'voice-encoder.onnx');
+// unpackedPath: onnxruntime-node opens the file natively, which can't read inside app.asar.
+const DEFAULT_MODEL = unpackedPath(path.join(__dirname, 'diarize', 'voice-encoder.onnx'));
 
 // modelPath resolves the exported voice-encoder, overridable via cfg.diarize_onnx_model.
 function modelPath(cfg) {

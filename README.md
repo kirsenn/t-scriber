@@ -1,6 +1,6 @@
 # t-scriber
 
-Локальный (privacy-first) транскрибатор встреч Google Meet для macOS. Всё считается на устройстве: аудио и активный спикер берутся из браузера, речь распознаётся `whisper.cpp` (large-v3-turbo, Metal), анализ — Gemma 4 12B через `llama.cpp`. Данные никуда не уходят за пределы устройства.
+Локальный (privacy-first) транскрибатор встреч Google Meet для macOS. Всё считается на устройстве: аудио и активный спикер берутся из браузера, речь распознаётся `whisper.cpp` (large-v3-turbo, Metal) или GigaAM-v3 (для русского), анализ — Gemma 4 12B через `llama.cpp`. Данные никуда не уходят за пределы устройства.
 
 Целевое железо: **Mac на Apple Silicon**, ≥16 GB RAM
 
@@ -14,6 +14,7 @@
 | Модель | Для чего | Размер | Ссылка |
 |--------|----------|--------|--------|
 | `ggml-large-v3-turbo-q5_0.bin` | Распознавание речи (Whisper) | ~547 MB | [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin) |
+| `v3_e2e_rnnt_*.onnx` + `v3_e2e_rnnt_vocab.txt` | Распознавание русской речи (GigaAM-v3, необязательно) | ~890 MB | [HuggingFace](https://huggingface.co/istupakov/gigaam-v3-onnx/tree/main) — encoder, decoder, joint, vocab в одну папку |
 | `gemma-4-12b-it-IQ4_XS.gguf` | Генерация резюме (Gemma 4 12B) | ~5.9 GB | [HuggingFace](https://huggingface.co/ggml-org/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-IQ4_XS.gguf) |
 
 **3. Укажи пути к моделям в настройках:**
@@ -54,6 +55,18 @@ cd electron && npm install && npm start
 just package   # или just build — полная сборка движков + DMG
 ```
 
+## Распознавание: Whisper или GigaAM
+
+Движок зависит от языка встречи, выбранного в расширении: русские встречи распознаёт **GigaAM**, все остальные — Whisper. Для русского можно вернуть Whisper в настройках (⌘, → «Русский») или ключом `asr_ru: "whisper"`. Если файлов модели GigaAM нет, встреча распознаётся Whisper, а в лог пишется предупреждение.
+
+**GigaAM-v3** (Сбер, MIT) — модель только для русского языка. На наших встречах она распознаёт разговорную речь заметно точнее Whisper, не зацикливается на повторах и работает примерно втрое быстрее (час записи — ~45 с на M4 Pro, CPU). Работает на чистом JS через `onnxruntime-node` в worker-потоке, как и диаризация ([src/gigaam/](electron/src/gigaam/)):
+
+- Silero VAD режет дорожку на куски до 20 с (`silero-vad.onnx`, закоммичен);
+- лог-mel фронтенд (`frontend.onnx`, закоммичен, генерируется `scripts/export-gigaam-frontend.py`) → энкодер → жадный RNNT-декодинг с пословными таймкодами;
+- реплики режутся по предложениям, а не по минутным кускам, как у Whisper, — точнее атрибуция спикеров.
+
+Отличия от Whisper, которые закрывает постобработка: GigaAM пишет английские термины кириллицей («конкордиум», «флаттер») и дословно записывает «э-э». Междометия вырезаются (`gigaam_drop_fillers`, по умолчанию `true`), а термины меняются по словарю: встроенный список в [text.js](electron/src/gigaam/text.js) дополняется ключом `asr_replacements` — основа слова → замена, например `{"джир": "Jira"}` (`null` отключает встроенную замену). `whisper_prompt` на GigaAM не влияет.
+
 ## Диаризация
 
 Спикер берётся из DOM-эквалайзера Meet, который замирает, когда вкладка скрыта (например, ты шаришь экран). Диаризация — это фолбэк: после распознавания она сравнивает «осиротевшие» реплики с голосами тех, кто уже был атрибутирован при видимой вкладке, и доназначает имена по голосу. Кто говорил **только** при скрытой вкладке (голосового образца нет) — останется `unknown_speaker_N`.
@@ -74,6 +87,7 @@ t-scriber/
 │   │   ├── mapping.js      # Атрибуция реплик участникам
 │   │   ├── analyze.js      # LLM (Gemma 4 12B)
 │   │   ├── transcribe.js   # Обёртка whisper.cpp
+│   │   ├── gigaam.js       # Движок GigaAM-v3 (worker, VAD, RNNT, постобработка в gigaam/)
 │   │   ├── diarize.js      # Голосовая диаризация (фолбэк для скрытой вкладки)
 │   │   ├── session.js      # Управление файлами сессии
 │   │   ├── config.js       # Загрузка конфига
@@ -88,7 +102,9 @@ t-scriber/
 ├── third_party/            # whisper.cpp, llama.cpp
 ├── scripts/
 │   ├── setup-models.sh         # Сборка движков + скачивание моделей
-│   └── export-voice-encoder.py # Build-tool: регенерация voice-encoder.onnx
+│   ├── export-voice-encoder.py # Build-tool: регенерация voice-encoder.onnx
+│   ├── export-gigaam-frontend.py # Build-tool: регенерация gigaam/frontend.onnx
+│   └── gigaam-compare/         # Прототип и сравнение GigaAM vs Whisper на сессиях
 └── tscriber.config.example.json
 ```
 
@@ -102,9 +118,9 @@ cp tscriber.config.example.json tscriber.config.json
 ```
 Поиск конфига при запуске: `$TSCRIBER_CONFIG` → `./tscriber.config.json` (в корне репо) → `~/.tscriber/config.json`. Пути с `~/` разворачиваются.
 
-Ключи: `addr`, `data_dir`, `auto`, `summarize`, `language`, `self_name` (имя для mic-дорожки), `threads`, `whisper_bin`, `model`, `vad_model`, `llama_bin`, `gemma_model`, `diarize`.
+Ключи: `addr`, `data_dir`, `auto`, `summarize`, `language`, `threads`, `whisper_bin`, `model`, `vad_model`, `llama_bin`, `gemma_model`, `diarize`, `asr_ru`, `gigaam_model_dir`, `gigaam_encoder`, `gigaam_drop_fillers`, `asr_replacements` (см. [Распознавание](#распознавание-whisper-или-gigaam)).
 
-Поставь `self_name` равным своему имени в Meet — тогда атрибуция из DOM и фолбэк будут давать одну метку.
+Реплики с mic-дорожки без speaker-события подписываются как «Вы» (или «You» для нерусских встреч).
 
 `diarize` (по умолчанию `true`) включает голосовую диаризацию — см. [раздел выше](#диаризация). Необязательный ключ `diarize_onnx_model` задаёт путь к своей модели voice-encoder (по умолчанию берётся `electron/src/diarize/voice-encoder.onnx`).
 
@@ -155,6 +171,7 @@ cd electron
 node transcribe-cli.js --latest                  # самая свежая сессия
 node transcribe-cli.js --dir ~/.tscriber/sessions/<ts>
 node transcribe-cli.js --latest --summary-only   # только пересобрать summary.md
+node transcribe-cli.js --latest --engine whisper # русскую встречу — Whisper вместо GigaAM
 ```
 
 ## Тесты
@@ -174,6 +191,7 @@ whisper + ~5 ГБ Gemma, ~1 мин), поэтому вынесен из `npm tes
 cd electron
 npm run gen-fixture   # один раз: генерит аудио-фикстуру (нужен macOS: say + afconvert)
 npm run test:e2e      # сам прогон (нужны собранные движки + модели, как для приложения)
+ASR_ENGINE=whisper npm run test:e2e  # то же, но русские фикстуры через Whisper
 ```
 
 - **Сценарии — это JSON.** Каждый разговор описан в `test/e2e/scenarios/<name>.json`
@@ -182,7 +200,7 @@ npm run test:e2e      # сам прогон (нужны собранные дв�
   сценарий — положи рядом ещё один `<name>.json` и перегенерируй; тест прогонит отдельный
   подтест на каждый. Два слышимо разных спикера делаются из единственного русского голоса
   Milena через разметку питча/темпа `say` (`voices`); реплика на mic-дорожке без
-  speaker-события проверяет фолбэк на `self_name`.
+  speaker-события проверяет фолбэк на метку «Вы».
 - **Фикстуры** (`test/fixtures/e2e/<name>/`) генерируются из сценариев и коммитятся —
   `npm run test:e2e` их только воспроизводит и `say` не вызывает. `gen-fixture.js` без
   аргументов перегенерит все сценарии; `node test/e2e/gen-fixture.js scenarios/<name>.json` —

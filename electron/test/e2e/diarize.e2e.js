@@ -45,7 +45,8 @@ function diarizeSkipReason(cfg) {
   return null;
 }
 
-const baseCfg   = load().cfg;
+// ASR_ENGINE=gigaam|whisper overrides the recogniser used for the (Russian) fixtures.
+const baseCfg   = { ...load().cfg, ...(process.env.ASR_ENGINE ? { asr_ru: process.env.ASR_ENGINE } : {}) };
 const binReason = binarySkipReason(baseCfg);
 const diarReason = diarizeSkipReason(baseCfg);
 const fixtures  = discover('diarize');

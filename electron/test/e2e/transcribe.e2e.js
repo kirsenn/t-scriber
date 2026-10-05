@@ -5,6 +5,7 @@
 // the artifacts. Heavy and slow (loads whisper + a ~5GB Gemma), so it is opt-in:
 //
 //   cd electron && npm run test:e2e          # sets RUN_E2E=1
+//   ASR_ENGINE=whisper npm run test:e2e      # same, transcribing with Whisper instead of GigaAM
 //
 // One subtest runs per scenario fixture under test/fixtures/e2e/<scenario>/ (generated from
 // test/e2e/scenarios/<scenario>.json via `npm run gen-fixture`). Determinism: the summariser
@@ -22,7 +23,7 @@ const { execFile } = require('node:child_process');
 
 const WebSocket = require('ws');
 const { CaptureServer } = require('../../src/capture.js');
-const { process: pipelineProcess } = require('../../src/pipeline.js');
+const { process: pipelineProcess, selfLabel } = require('../../src/pipeline.js');
 const { load } = require('../../src/config.js');
 const { cleanOutput } = require('../../src/analyze.js');
 const { reportFacts, factMatches } = require('./match.js');
@@ -44,7 +45,8 @@ function binarySkipReason(cfg) {
   return null;
 }
 
-const baseCfg   = load().cfg;
+// ASR_ENGINE=gigaam|whisper overrides the recogniser used for the (Russian) fixtures.
+const baseCfg   = { ...load().cfg, ...(process.env.ASR_ENGINE ? { asr_ru: process.env.ASR_ENGINE } : {}) };
 const binReason = binarySkipReason(baseCfg);
 const fixtures  = discover('transcribe'); // transcription-only scenarios (diarize ones run in diarize.e2e.js)
 
@@ -133,7 +135,7 @@ async function runScenario(fx) {
     }
 
     // Speaker attribution: tab speakers come from events; an event-less mic turn falls back
-    // to self_name (mapping.build).
+    // to the "Вы"/"You" self label (pipeline.selfLabel → mapping.build).
     const speakers = new Set(dialogue.map((d) => d.speaker));
     for (const sp of exp.tabSpeakers) {
       assert.ok(speakers.has(sp), `${sp} not attributed (got: ${[...speakers]})`);
@@ -141,8 +143,9 @@ async function runScenario(fx) {
     if (exp.expectSelfFallback) {
       const micSegs = dialogue.filter((d) => d.source === 'mic');
       assert.ok(micSegs.length > 0, 'expected mic segments (self fallback) but found none');
-      assert.ok(micSegs.every((d) => d.speaker === scn.selfName),
-        `mic segments not attributed to self_name="${scn.selfName}" (got: ${micSegs.map((d) => d.speaker)})`);
+      const self = selfLabel(cfg.language);
+      assert.ok(micSegs.every((d) => d.speaker === self),
+        `mic segments not attributed to "${self}" (got: ${micSegs.map((d) => d.speaker)})`);
     }
 
     // Summary structure: the prompt mandates exactly these three headings.

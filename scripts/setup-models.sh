@@ -22,6 +22,9 @@ VAD_URL="https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5
 # in llama.cpp's text loader; mmproj-*.gguf in the same repo is the separate vision/audio part).
 GEMMA="$MODELS/gemma-4-E4B-it-Q4_K_M.gguf"
 GEMMA_URL="https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf"
+# GigaAM-v3 e2e RNNT (Russian ASR engine, asr_engine: "gigaam") — ONNX export, MIT.
+GIGAAM_DIR="$MODELS/gigaam-v3-e2e-rnnt"
+GIGAAM_URL="https://huggingface.co/istupakov/gigaam-v3-onnx/resolve/main"
 
 echo "==> repo root: $ROOT"
 
@@ -67,6 +70,12 @@ download "$WHISPER_MODEL" "$WHISPER_URL" "whisper large-v3-turbo q5 (~547 MB)"
 download "$VAD_MODEL"     "$VAD_URL"     "Silero VAD (~1 MB)"
 download "$GEMMA"         "$GEMMA_URL"   "Gemma 4 E4B Q4_K_M (~5.3 GB, text-only)"
 
+mkdir -p "$GIGAAM_DIR"
+for f in v3_e2e_rnnt_encoder.onnx v3_e2e_rnnt_decoder.onnx v3_e2e_rnnt_joint.onnx v3_e2e_rnnt_vocab.txt; do
+  download "$GIGAAM_DIR/$f" "$GIGAAM_URL/$f" "GigaAM-v3 $f"
+done
+
+# GigaAM's log-mel front-end and Silero VAD are committed in electron/src/gigaam/.
 # Diarization needs no setup here: the voice-encoder.onnx model (~6 MB) is committed in
 # electron/src/diarize/ and the onnxruntime-node addon comes in via `npm install`.
 

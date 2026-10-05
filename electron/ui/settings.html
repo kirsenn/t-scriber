@@ -71,6 +71,14 @@
       text-align: left;
     }
     .s-path.missing { color: #ef4444; }
+    .s-row.invalid  { background: #fef2f2; box-shadow: inset 0 0 0 1px #ef4444; }
+    .s-row.invalid .s-path { color: #ef4444; }
+    .s-error {
+      font-size: 11px;
+      color: #ef4444;
+      padding: 0 14px 8px 144px;
+      background: #fef2f2;
+    }
     .s-path.ok      { color: #666; }
 
     .s-btn-pick {
@@ -99,6 +107,7 @@
       -webkit-app-region: no-drag;
     }
     input[type=number].s-input { max-width: 72px; flex: 0 0 72px; }
+    select.s-input { flex: 0 0 auto; cursor: pointer; -webkit-app-region: no-drag; }
 
     .s-hint {
       font-size: 11px;
@@ -168,10 +177,24 @@
         <div class="s-section-title">Модели</div>
         <div class="s-card">
           <div class="s-row">
+            <span class="s-label">Русский</span>
+            <select class="s-input" id="sel-asr-ru">
+              <option value="gigaam">GigaAM</option>
+              <option value="whisper">Whisper</option>
+            </select>
+            <span class="s-hint">English — всегда Whisper</span>
+          </div>
+          <div class="s-row">
             <span class="s-label">Whisper</span>
             <span class="s-path" id="path-model" title=""></span>
             <button class="s-btn-pick" data-field="model" data-filter="bin">Выбрать…</button>
           </div>
+          <div class="s-row" id="row-gigaam">
+            <span class="s-label">GigaAM</span>
+            <span class="s-path" id="path-gigaam" title=""></span>
+            <button class="s-btn-pick" data-field="gigaam_model_dir" data-directory="1">Папка…</button>
+          </div>
+          <div class="s-error" id="gigaam-error" hidden></div>
           <div class="s-row">
             <span class="s-label">Gemma (резюме)</span>
             <span class="s-path" id="path-gemma" title=""></span>

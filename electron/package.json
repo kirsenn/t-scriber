@@ -1,6 +1,6 @@
 {
   "name": "t-scriber",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Local meeting transcription and summarisation",
   "author": "kirsenn@gmail.com",
   "main": "main.js",
@@ -59,7 +59,8 @@
     ],
     "asarUnpack": [
       "**/*.node",
-      "**/voice-encoder.onnx"
+      "**/voice-encoder.onnx",
+      "**/src/gigaam/*.onnx"
     ],
     "extraResources": [
       {
