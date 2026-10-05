@@ -60,6 +60,7 @@
     "asarUnpack": [
       "**/*.node",
       "**/voice-encoder.onnx",
+      "**/src/asr/*.onnx",
       "**/src/asr/gigaam/*.onnx"
     ],
     "extraResources": [
@@ -70,10 +71,6 @@
       {
         "from": "../extension",
         "to": "extension"
-      },
-      {
-        "from": "../models/ggml-silero-v5.1.2.bin",
-        "to": "models/ggml-silero-v5.1.2.bin"
       }
     ],
     "directories": {

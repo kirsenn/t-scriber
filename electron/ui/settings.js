@@ -9,8 +9,8 @@ let cfg = {};  // current values (shown in UI)
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
 const pathEls = {
-  model:       document.getElementById('path-model'),
   gigaam_model_dir: document.getElementById('path-gigaam'),
+  parakeet_model_dir: document.getElementById('path-parakeet'),
   gemma_model: document.getElementById('path-gemma'),
 };
 
@@ -20,8 +20,6 @@ const inpLlmMaxTokens = document.getElementById('inp-llm-max-tokens');
 const chkAuto         = document.getElementById('chk-auto');
 const chkSummarize    = document.getElementById('chk-summarize');
 const chkDiarize      = document.getElementById('chk-diarize');
-const rowGigaam    = document.getElementById('row-gigaam');
-const gigaamError  = document.getElementById('gigaam-error');
 const btnSave      = document.getElementById('btn-save');
 const savedMsg     = document.getElementById('saved-msg');
 
@@ -49,44 +47,55 @@ function renderPath(field, value) {
 }
 
 function render() {
-  renderPath('model',       cfg.model);
   renderPath('gigaam_model_dir', cfg.gigaam_model_dir);
+  renderPath('parakeet_model_dir', cfg.parakeet_model_dir);
   renderPath('gemma_model', cfg.gemma_model);
 
-  selAsrRu.value        = cfg.asr_ru === 'whisper' ? 'whisper' : 'gigaam';
+  selAsrRu.value        = cfg.asr_ru === 'parakeet' ? 'parakeet' : 'gigaam';
   inpLlmMaxTokens.value = cfg.llm_max_tokens ?? 4096;
   chkAuto.checked       = !!cfg.auto;
   chkSummarize.checked  = !!cfg.summarize;
   chkDiarize.checked    = !!cfg.diarize;
 }
 
-// validate blocks saving while GigaAM is chosen for Russian but its model folder is not set
-// or lacks the model files; the folder row is highlighted with a hint.
+// Engines that need a model folder, with the folder row and hint shown when it is invalid.
+const dirEngines = [
+  { engine: 'gigaam',   label: 'GigaAM',   field: 'gigaam_model_dir' },
+  { engine: 'parakeet', label: 'Parakeet', field: 'parakeet_model_dir' },
+].map(d => ({ ...d, row: document.getElementById(`row-${d.engine}`), err: document.getElementById(`${d.engine}-error`) }));
+
+// validate blocks saving while the engine chosen for Russian has no model folder set or the
+// folder lacks the model files; the folder row is highlighted with a hint. (English always uses
+// Parakeet; an unset Parakeet folder only shows as «Не задано».)
 let valid = true;
 let saving = false;
 
 async function validate() {
-  let error = null;
-  if (selAsrRu.value === 'gigaam') {
-    const missing = await tscriber.checkGigaamDir(cfg.gigaam_model_dir ?? null);
-    if (missing.length) {
-      error = cfg.gigaam_model_dir
-        ? `В папке нет файлов модели GigaAM: ${missing.join(', ')}. Укажите папку, где лежит модель.`
-        : 'Для русского выбран GigaAM — укажите папку, где лежит модель (кнопка «Папка…»).';
+  valid = true;
+  for (const d of dirEngines) {
+    let error = null;
+    if (selAsrRu.value === d.engine) {
+      const dir = cfg[d.field] ?? null;
+      const missing = await tscriber.checkModelDir(d.engine, dir);
+      if (missing.length) {
+        error = dir
+          ? `В папке нет файлов модели ${d.label}: ${missing.join(', ')}. Укажите папку, где лежит модель.`
+          : `Для русского выбран ${d.label} — укажите папку, где лежит модель (кнопка «Папка…»).`;
+      }
     }
+    d.row.classList.toggle('invalid', !!error);
+    d.err.textContent = error || '';
+    d.err.hidden = !error;
+    if (error) valid = false;
   }
-  valid = !error;
-  rowGigaam.classList.toggle('invalid', !valid);
-  gigaamError.textContent = error || '';
-  gigaamError.hidden = valid;
   btnSave.disabled = saving || !valid;
 }
 
 function collect() {
   return {
     asr_ru:      selAsrRu.value,
-    model:       cfg.model       ?? null,
     gigaam_model_dir: cfg.gigaam_model_dir ?? null,
+    parakeet_model_dir: cfg.parakeet_model_dir ?? null,
     gemma_model: cfg.gemma_model ?? null,
     llm_max_tokens:  parseInt(inpLlmMaxTokens.value, 10) || 4096,
     auto:            chkAuto.checked,
@@ -98,7 +107,6 @@ function collect() {
 // ── file pickers ──────────────────────────────────────────────────────────────
 
 const filterMap = {
-  bin:  [{ name: 'GGML model', extensions: ['bin'] }],
   gguf: [{ name: 'GGUF model', extensions: ['gguf'] }],
 };
 

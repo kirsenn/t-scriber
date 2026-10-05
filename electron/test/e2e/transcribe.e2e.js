@@ -1,11 +1,11 @@
 'use strict';
 
 // Full end-to-end transcription test, no UI. Replays generated audio fixtures through the
-// real WebSocket capture path, lets the real pipeline run (whisper + Gemma), and asserts on
-// the artifacts. Heavy and slow (loads whisper + a ~5GB Gemma), so it is opt-in:
+// real WebSocket capture path, lets the real pipeline run (ASR + Gemma), and asserts on
+// the artifacts. Heavy and slow (loads an ASR model + a ~5GB Gemma), so it is opt-in:
 //
 //   cd electron && npm run test:e2e          # sets RUN_E2E=1
-//   ASR_ENGINE=whisper npm run test:e2e      # same, transcribing with Whisper instead of GigaAM
+//   ASR_ENGINE=parakeet npm run test:e2e     # same, transcribing with Parakeet instead of GigaAM
 //
 // One subtest runs per scenario fixture under test/fixtures/e2e/<scenario>/ (generated from
 // test/e2e/scenarios/<scenario>.json via `npm run gen-fixture`). Determinism: the summariser
@@ -26,6 +26,7 @@ const { CaptureServer } = require('../../src/capture.js');
 const { process: pipelineProcess, selfLabel } = require('../../src/pipeline.js');
 const { load } = require('../../src/config.js');
 const { cleanOutput } = require('../../src/analyze.js');
+const { select } = require('../../src/asr');
 const { reportFacts, factMatches } = require('./match.js');
 const { T0, deriveExpectations, discover } = require('./scenario.js');
 
@@ -40,12 +41,14 @@ const SOURCE_MIC   = 1;
 // presence is handled separately (per scenario / via discovery).
 function binarySkipReason(cfg) {
   if (!process.env.RUN_E2E) return 'set RUN_E2E=1 to run the heavy E2E test';
-  const needed = [cfg.whisper_bin, cfg.model, cfg.vad_model, cfg.llama_bin, cfg.gemma_model];
+  const asrError = select({ ...cfg, language: 'ru' }).error;
+  if (asrError) return asrError;
+  const needed = [cfg.llama_bin, cfg.gemma_model];
   for (const p of needed) if (!p || !fs.existsSync(p)) return `missing binary/model: ${p}`;
   return null;
 }
 
-// ASR_ENGINE=gigaam|whisper overrides the recogniser used for the (Russian) fixtures.
+// ASR_ENGINE=gigaam|parakeet overrides the recogniser used for the (Russian) fixtures.
 const baseCfg   = { ...load().cfg, ...(process.env.ASR_ENGINE ? { asr_ru: process.env.ASR_ENGINE } : {}) };
 const binReason = binarySkipReason(baseCfg);
 const fixtures  = discover('transcribe'); // transcription-only scenarios (diarize ones run in diarize.e2e.js)
@@ -75,7 +78,7 @@ async function runScenario(fx) {
 
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tscriber-e2e-'));
   const cfg = { ...baseCfg, data_dir: dataDir, summarize: true, language: 'ru',
-    self_name: scn.selfName, llm_temp: 0, llm_seed: 42, whisper_prompt: '' };
+    self_name: scn.selfName, llm_temp: 0, llm_seed: 42 };
 
   const srv = new CaptureServer(dataDir, () => {});
   let capturedDir = null;
@@ -127,11 +130,11 @@ async function runScenario(fx) {
     console.log(`\n===== ${tag} transcript.txt =====\n` + transcript);
     console.log(`\n===== ${tag} summary.md =====\n` + summary);
 
-    // Whisper sanity: robust facts must survive transcription. Failure here points at
-    // audio/whisper, not the summariser.
+    // ASR sanity: robust facts must survive transcription. Failure here points at
+    // audio/ASR, not the summariser.
     assert.ok(transcript.trim().length > 0, 'empty transcript');
     for (const id of scn.transcriptFacts) {
-      assert.ok(factMatches(transcript, factById[id]), `transcript missing planted fact "${id}" (whisper layer)`);
+      assert.ok(factMatches(transcript, factById[id]), `transcript missing planted fact "${id}" (ASR layer)`);
     }
 
     // Speaker attribution: tab speakers come from events; an event-less mic turn falls back

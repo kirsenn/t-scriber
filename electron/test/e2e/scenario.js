@@ -20,7 +20,7 @@ const SCENARIOS_DIR = path.join(__dirname, 'scenarios');
 const FIXTURES_DIR  = path.join(__dirname, '..', 'fixtures', 'e2e');
 
 // Generation constants — fixed so replayed timestamps are reproducible. gen-fixture lays both PCM
-// tracks on this clock; the harness replays with the same T0 so a whisper segment's file offset
+// tracks on this clock; the harness replays with the same T0 so an ASR segment's file offset
 // reconstructs to the same wall-clock epoch the speaker events use (see mapping.js).
 const T0          = 1700000000000;
 const SAMPLE_RATE = 16000;

@@ -121,7 +121,7 @@ test('splitAtBoundaries: gap between speakers produces three parts', () => {
 
 // --- build with splitting ---
 
-test('build: Whisper segment spanning two back-to-back speakers is split correctly', () => {
+test('build: ASR segment spanning two back-to-back speakers is split correctly', () => {
   const intervals = [
     { speaker: 'Alice', startMs: 0,    endMs: 2000 },
     { speaker: 'Bob',   startMs: 2000, endMs: 4000 },

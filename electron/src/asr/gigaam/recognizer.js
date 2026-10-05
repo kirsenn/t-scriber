@@ -13,7 +13,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseVocab, tokensToWords } = require('./text.js');
+const { parseVocab, tokensToWords } = require('../words.js');
 const { unpackedPath } = require('../../util.js');
 const { SAMPLE_RATE } = require('../../audio.js');
 

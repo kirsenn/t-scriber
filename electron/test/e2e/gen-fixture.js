@@ -15,7 +15,7 @@
 // What it does per scenario: synthesises each scripted line with the Milena voice (distinct
 // speakers via per-speaker pitch/rate markup), lays the lines on a single shared clock into
 // two continuous PCM tracks (tab + mic, silence where the other speaks), and emits speaker
-// events. Both tracks start at T0 and stay byte-aligned, so a whisper segment's file offset
+// events. Both tracks start at T0 and stay byte-aligned, so an ASR segment's file offset
 // reconstructs to the same wall-clock epoch the events use (see mapping.js).
 
 const fs = require('node:fs');

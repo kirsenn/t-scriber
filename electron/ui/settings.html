@@ -180,14 +180,9 @@
             <span class="s-label">Русский</span>
             <select class="s-input" id="sel-asr-ru">
               <option value="gigaam">GigaAM</option>
-              <option value="whisper">Whisper</option>
+              <option value="parakeet">Parakeet</option>
             </select>
-            <span class="s-hint">English — всегда Whisper</span>
-          </div>
-          <div class="s-row">
-            <span class="s-label">Whisper</span>
-            <span class="s-path" id="path-model" title=""></span>
-            <button class="s-btn-pick" data-field="model" data-filter="bin">Выбрать…</button>
+            <span class="s-hint">English — всегда Parakeet</span>
           </div>
           <div class="s-row" id="row-gigaam">
             <span class="s-label">GigaAM</span>
@@ -195,6 +190,12 @@
             <button class="s-btn-pick" data-field="gigaam_model_dir" data-directory="1">Папка…</button>
           </div>
           <div class="s-error" id="gigaam-error" hidden></div>
+          <div class="s-row" id="row-parakeet">
+            <span class="s-label">Parakeet</span>
+            <span class="s-path" id="path-parakeet" title=""></span>
+            <button class="s-btn-pick" data-field="parakeet_model_dir" data-directory="1">Папка…</button>
+          </div>
+          <div class="s-error" id="parakeet-error" hidden></div>
           <div class="s-row">
             <span class="s-label">Gemma (резюме)</span>
             <span class="s-path" id="path-gemma" title=""></span>

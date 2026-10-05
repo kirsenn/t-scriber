@@ -2,7 +2,7 @@
 
 Локальный транскрибатор встреч Google Meet для macOS. Записывает звонок, расшифровывает его с разметкой «кто что сказал» и пишет краткое резюме: решения и задачи. Всё считается на устройстве, аудио и текст никуда не отправляются.
 
-- **Распознавание речи:** русские встречи — [GigaAM-v3](https://github.com/salute-developers/GigaAM) (Сбер), остальные — [whisper.cpp](https://github.com/ggml-org/whisper.cpp) large-v3-turbo.
+- **Распознавание речи:** русские встречи — [GigaAM-v3](https://github.com/salute-developers/GigaAM) (Сбер), английские — [Parakeet-TDT-0.6B-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (NVIDIA).
 - **Кто говорит:** по подсветке спикера в интерфейсе Meet, а когда вкладка скрыта — по голосу.
 - **Резюме:** Gemma 4 12B через [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
@@ -22,15 +22,15 @@
 
 **1. Приложение.** Открой `.dmg` и перетащи T-Scriber в Applications. При первом запуске macOS предупредит о неизвестном разработчике: правый клик по приложению → «Открыть».
 
-**2. Модели.** Скачиваются один раз, всего ~7,8 ГБ:
+**2. Модели.** Скачиваются один раз, всего ~9,8 ГБ:
 
 | Модель | Для чего | Размер | Где взять |
 |--------|----------|--------|-----------|
-| `ggml-large-v3-turbo-q5_0.bin` | Распознавание: английский и запасной вариант для русского (Whisper) | ~550 МБ | [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin) |
 | `v3_e2e_rnnt_encoder.onnx`, `v3_e2e_rnnt_decoder.onnx`, `v3_e2e_rnnt_joint.onnx`, `v3_e2e_rnnt_vocab.txt` | Распознавание русского (GigaAM). Четыре файла — в одну папку | ~890 МБ | [HuggingFace](https://huggingface.co/istupakov/gigaam-v3-onnx/tree/main) |
+| `nemo128.onnx`, `encoder-model.onnx`, `encoder-model.onnx.data`, `decoder_joint-model.onnx`, `vocab.txt` | Распознавание английского и запасной вариант для русского (Parakeet). Пять файлов — в одну папку | ~2,5 ГБ | [HuggingFace](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/tree/main) |
 | `gemma-4-12b-it-IQ4_XS.gguf` | Резюме встречи (Gemma 4 12B) | ~6,4 ГБ | [HuggingFace](https://huggingface.co/ggml-org/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-IQ4_XS.gguf) |
 
-**3. Пути к моделям.** T-Scriber → **⌘,** → укажи файл Whisper, папку GigaAM и файл Gemma → «Сохранить». Пока выбран GigaAM, а папка с его файлами не указана, сохранить нельзя: поле подсветится красным.
+**3. Пути к моделям.** T-Scriber → **⌘,** → укажи папки GigaAM и Parakeet и файл Gemma → «Сохранить». Пока для русского выбрана модель, а папка с её файлами не указана, сохранить нельзя: поле подсветится красным.
 
 **4. Расширение Chrome.** Меню «Помощь» → «Открыть папку расширения». Затем в Chrome: `chrome://extensions` → «Режим разработчика» → «Загрузить распакованное» → выбери эту папку (`T-Scriber.app/Contents/Resources/extension/`).
 
@@ -63,7 +63,7 @@ Chrome-расширение                        Приложение (Electro
 │ звук вкладки (собеседники)│  PCM 16 кГц │ WebSocket :8080 → tab.pcm, mic.pcm,     │
 │ микрофон (ты)             │ ──────────► │                   events.jsonl          │
 │ кто говорит (DOM Meet)    │  + события  │                       │                 │
-└──────────────────────────┘             │ распознавание (GigaAM | Whisper)        │
+└──────────────────────────┘             │ распознавание (GigaAM | Parakeet)       │
                                           │   → кто что сказал → диаризация         │
                                           │   → резюме (Gemma) → SQLite → окно      │
                                           └─────────────────────────────────────────┘
@@ -73,22 +73,37 @@ Chrome-расширение                        Приложение (Electro
 
 Модель выбирается по языку встречи:
 
-- **русский** — GigaAM. В настройках (⌘, → «Русский») можно вернуть Whisper;
-- **английский** — всегда Whisper.
+- **русский** — GigaAM (в настройках ⌘, → «Русский» можно выбрать Parakeet);
+- **английский** — Parakeet.
 
-Если файлов GigaAM нет, русская встреча распознаётся через Whisper, а в лог пишется предупреждение. Запись в любом случае не теряется.
+Если файлов модели для русского нет, встреча распознаётся второй моделью, а в лог пишется предупреждение. Если нет ни одной подходящей модели, расшифровка не запускается, но запись не теряется: её можно перепрогнать, когда модель появится.
 
-**Почему GigaAM для русского.** Это модель Сбера (MIT), обученная только на русской речи. На наших встречах она:
+**Почему GigaAM для русского.** Это модель Сбера (MIT), обученная только на русской речи. WER на наборах с ручной разметкой, сегменты склеены в длинные треки (M4 Pro):
 
-- точнее понимает разговорную речь;
-- не «зацикливается», как Whisper, который иногда повторяет одну фразу десятки раз и теряет минуты разговора;
-- работает примерно втрое быстрее: час записи — ~45–50 с против ~2,5 мин у Whisper на M4 Pro;
-- режет текст по предложениям, а не минутными кусками, поэтому реплики точнее делятся между участниками.
+| | Podlodka (IT-подкаст, 28 мин) | [SOVA RuDevices](https://huggingface.co/datasets/bond005/sova_rudevices) (15 мин) | [Golos farfield](https://huggingface.co/datasets/bond005/sberdevices_golos_100h_farfield) (15 мин) | Скорость |
+|---|---|---|---|---|
+| GigaAM | 6,8% | **11,2%** | 19,0% | **~65×** |
+| Parakeet fp32 | 8,1% | 14,1% | **17,7%** | ~42× |
+| Whisper large-v3-turbo¹ | **6,6%** | 24,0% | 28,3% | ~20× |
+
+Podlodka — [bond005/podlodka_speech](https://huggingface.co/datasets/bond005/podlodka_speech), ближе всего к нашим встречам. Скорость — во сколько раз быстрее реального времени. ¹ Whisper из приложения убран: на живой речи он заметно хуже, в 3 раза медленнее GigaAM и на длинных встречах «зацикливается» (на одной 37-минутной встрече повторил фразу 155 раз). GigaAM и Parakeet режут текст по предложениям, поэтому реплики точнее делятся между участниками.
 
 У GigaAM две особенности, которые закрывает постобработка:
 
 - **Заминки.** «э-э», «ммм» модель записывает дословно, их вырезает настройка `gigaam_drop_fillers`.
 - **Английские термины.** Модель пишет их кириллицей («конкордиум», «флаттер»), а словарь замен возвращает латиницу: Concordium, Flutter. Встроенный словарь лежит в [text.js](electron/src/asr/gigaam/text.js), свои слова добавляются через `gigaam_replacements`.
+
+**Почему Parakeet для английского.** Модель NVIDIA (CC-BY-4.0), 600M параметров, TDT-декодер. На 16-минутном фрагменте реальной встречи из корпуса [AMI](https://groups.inf.ed.ac.uk/ami/corpus/) (M4 Pro):
+
+| | WER | Время |
+|---|---|---|
+| Parakeet fp32 | **16,7%** | 27 с |
+| Parakeet int8 | 26,6% | 23 с |
+| Whisper large-v3-turbo q5¹ | 23,8% | 41 с |
+
+Как и GigaAM, режет текст по предложениям и не зацикливается. Пишет заминки («um», «uh»), их вырезает постобработка. Квантованная int8-версия заметно теряет слова, поэтому по умолчанию fp32 (`parakeet_quant`). Пик памяти ~3 ГБ; модель выгружается до запуска Gemma.
+
+Parakeet понимает и русский (ещё 24 европейских языка), поэтому он же — запасной вариант для русских встреч. Словаря замен терминов для него нет.
 
 ### Кто говорит
 
@@ -106,23 +121,23 @@ Gemma 4 12B получает расшифровку и пишет три раз�
 - **Два аудиопотока:** `tabCapture` даёт голоса собеседников, `getUserMedia` — твой. Так свои реплики всегда известны.
 - **Сырой PCM 16 кГц по WebSocket:** склейка WebM-чанков даёт битый контейнер.
 - **Файлы сессии — источник правды, SQLite — индекс** для быстрого списка встреч.
-- **Тяжёлые вычисления — в фоновых потоках** (GigaAM, диаризация) или отдельных процессах (whisper-cli, llama-completion), поэтому интерфейс не подвисает.
+- **Тяжёлые вычисления — в фоновых потоках** (распознавание, диаризация) или отдельном процессе (llama-completion), поэтому интерфейс не подвисает.
 
 ## Настройки
 
-**В приложении (⌘,):** модель для русского (GigaAM / Whisper), пути к моделям, автообработка после записи, резюме, лимит токенов резюме, диаризация.
+**В приложении (⌘,):** модель для русского (GigaAM / Parakeet), пути к моделям, автообработка после записи, резюме, лимит токенов резюме, диаризация.
 
 **Файлом** — для разработки и расширенных параметров. Приложение ищет конфиг в порядке `$TSCRIBER_CONFIG` → `./tscriber.config.json` (корень репозитория) → `~/.tscriber/config.json`. Пути с `~/` разворачиваются, относительные считаются от корня репозитория. Пример — [tscriber.config.example.json](tscriber.config.example.json).
 
 | Ключ | По умолчанию | Что делает |
 |------|--------------|------------|
-| `model` | — | Модель Whisper (`.bin`) |
 | `gigaam_model_dir` | — | Папка с файлами GigaAM |
+| `parakeet_model_dir` | — | Папка с файлами Parakeet |
 | `gemma_model` | — | Модель резюме (`.gguf`) |
-| `asr_ru` | `"gigaam"` | Чем распознавать русский: `"gigaam"` или `"whisper"` |
-| `gigaam_drop_fillers` | `true` | Вырезать заминки («э-э», «ммм») |
+| `asr_ru` | `"gigaam"` | Чем распознавать русский: `"gigaam"` или `"parakeet"` |
+| `parakeet_quant` | `"fp32"` | Точность Parakeet: `"fp32"` или `"int8"` (меньше файл, хуже качество) |
+| `gigaam_drop_fillers` | `true` | Вырезать заминки («э-э», «ммм») у GigaAM. Parakeet вырезает их всегда |
 | `gigaam_replacements` | `{}` | Свои термины: основа слова → замена, например `{"джир": "Jira"}`. `null` отключает встроенную замену |
-| `whisper_prompt` | IT-термины | Подсказка Whisper со словарём предметной области (на GigaAM не влияет) |
 | `auto` | `true` | Обрабатывать запись сразу после остановки |
 | `summarize` | `true` | Писать резюме |
 | `diarize` | `true` | Определять спикеров по голосу, когда вкладка скрыта |
@@ -131,11 +146,11 @@ Gemma 4 12B получает расшифровку и пишет три раз�
 | `threads` | `0` (авто) | Потоки CPU для распознавания |
 | `addr` | `127.0.0.1:8080` | Адрес, на котором приложение принимает запись от расширения |
 | `data_dir` | `~/.tscriber/sessions` | Где хранить записи |
-| `whisper_bin`, `llama_bin`, `vad_model`, `diarize_onnx_model` | встроены | Свои бинарники и модели вместо встроенных (для разработки) |
+| `llama_bin`, `diarize_onnx_model` | встроены | Свой бинарник и модель вместо встроенных (для разработки) |
 
 ## Разработка
 
-**1. Движки и модели** (один раз, ~7 ГБ, 10–15 мин). Скрипт собирает whisper.cpp и llama.cpp с Metal и скачивает модели в `models/`, включая лёгкую Gemma 4 E4B для разработки:
+**1. Движки и модели** (один раз, ~9 ГБ, 10–15 мин). Скрипт собирает llama.cpp с Metal и скачивает модели в `models/`, включая Parakeet и лёгкую Gemma 4 E4B для разработки:
 
 ```bash
 xcode-select --install   # если нет clang
@@ -156,7 +171,7 @@ cd electron && npm install && npm start   # или: just dev
 
 ```bash
 just package   # бинарники + зависимости → electron/dist/T-Scriber-<версия>-arm64.dmg
-just build     # то же, но сначала пересобрать whisper.cpp и llama.cpp
+just build     # то же, но сначала пересобрать llama.cpp
 ```
 
 **Перепрогнать встречу из терминала:**
@@ -166,7 +181,7 @@ cd electron
 node transcribe-cli.js --latest                   # самая свежая встреча
 node transcribe-cli.js --dir ~/.tscriber/sessions/<ts>
 node transcribe-cli.js --latest --summary-only    # только резюме
-node transcribe-cli.js --latest --engine whisper  # русская встреча через Whisper
+node transcribe-cli.js --latest --engine parakeet # русская встреча через Parakeet
 ```
 
 Язык берётся из записи; `--lang` его переопределяет.
@@ -187,8 +202,10 @@ t-scriber/
 │   │   ├── pipeline.js         # Конвейер: распознавание → спикеры → резюме
 │   │   ├── asr/                # Распознавание речи
 │   │   │   ├── index.js        #   выбор модели по языку встречи
-│   │   │   ├── whisper/        #   whisper.cpp (процесс whisper-cli)
-│   │   │   └── gigaam/         #   GigaAM: VAD, RNNT-декодер, постобработка
+│   │   │   ├── vad.js          #   Silero VAD: нарезка дорожки на куски речи
+│   │   │   ├── words.js        #   токены → слова → предложения, заминки
+│   │   │   ├── gigaam/         #   GigaAM: RNNT-декодер, словарь терминов
+│   │   │   └── parakeet/       #   Parakeet: TDT-декодер
 │   │   ├── mapping.js          # Кто что сказал (по событиям Meet)
 │   │   ├── diarize/            # Спикеры по голосу
 │   │   ├── analyze.js          # Резюме (llama.cpp)
@@ -203,7 +220,7 @@ t-scriber/
 │   ├── export-gigaam-frontend.py   # Пересборка asr/gigaam/frontend.onnx
 │   └── export-voice-encoder.py     # Пересборка diarize/voice-encoder.onnx
 ├── models/                     # Модели (создаёт setup-models.sh)
-└── third_party/                # whisper.cpp, llama.cpp
+└── third_party/                # llama.cpp
 ```
 
 ### Модели распознавания
@@ -217,17 +234,19 @@ t-scriber/
 | `missing(opts)` | Каких файлов не хватает (пусто — можно запускать) |
 | `run(signal, pcmPath, workDir, opts)` | Распознать дорожку → `[{ startMs, endMs, text }]` |
 
-Выбор по языку и запасной вариант — в [src/asr/index.js](electron/src/asr/index.js). Новая модель — это новая папка плюс строка в этом файле; остальной код о конкретных моделях не знает.
+Выбор по языку и запасной вариант — в [src/asr/index.js](electron/src/asr/index.js). Новая модель — это новая папка плюс строка в этом файле; остальной код о конкретных моделях не знает. Общее для GigaAM и Parakeet — нарезка VAD ([vad.js](electron/src/asr/vad.js)) и сборка слов и предложений из токенов ([words.js](electron/src/asr/words.js)).
 
 **GigaAM** работает на JS через `onnxruntime-node` в фоновом потоке. Цепочка такая:
 
-1. Silero VAD режет дорожку на куски до 20 с.
+1. Silero VAD ([vad.js](electron/src/asr/vad.js)) режет дорожку на куски до 20 с.
 2. Лог-мел фронтенд превращает куски в признаки.
 3. Энкодер, жадный RNNT-декодер.
 4. Слова с таймкодами.
 5. Постобработка (заминки, термины), нарезка по предложениям.
 
-`silero-vad.onnx` и `frontend.onnx` лежат в репозитории; фронтенд пересобирается скриптом `scripts/export-gigaam-frontend.py`. Сами веса модели (encoder/decoder/joint) — [ONNX-экспорт](https://huggingface.co/istupakov/gigaam-v3-onnx) от istupakov.
+`silero-vad.onnx` (в `src/asr/`) и `frontend.onnx` лежат в репозитории; фронтенд пересобирается скриптом `scripts/export-gigaam-frontend.py`. Сами веса модели (encoder/decoder/joint) — [ONNX-экспорт](https://huggingface.co/istupakov/gigaam-v3-onnx) от istupakov.
+
+**Parakeet** устроен так же: тот же VAD, затем `nemo128.onnx` (лог-мел), энкодер и жадный TDT-декодер. В отличие от RNNT, он на каждом шаге предсказывает ещё и сколько кадров пропустить, поэтому быстрее. Все графы — [ONNX-экспорт](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) от istupakov, декодер — порт из [onnx-asr](https://github.com/istupakov/onnx-asr).
 
 **Диаризация** тоже на JS: эмбеддинги голоса считает `voice-encoder.onnx` (~6 МБ, в репозитории) — порт [resemblyzer](https://github.com/resemble-ai/Resemblyzer), пересобирается скриптом `scripts/export-voice-encoder.py`.
 
@@ -245,7 +264,7 @@ cd electron && npm test   # юнит-тесты, секунды, без моде
 cd electron
 npm run gen-fixture                   # один раз: озвучить сценарии (macOS say + afconvert)
 npm run test:e2e                      # нужны модели, как для приложения
-ASR_ENGINE=whisper npm run test:e2e   # русские сценарии через Whisper вместо GigaAM
+ASR_ENGINE=parakeet npm run test:e2e  # русские сценарии через Parakeet вместо GigaAM
 ```
 
 - **Сценарии** описаны в JSON: [test/e2e/scenarios/](electron/test/e2e/scenarios/). Там реплики, заложенные факты, голоса и обязательные пункты резюме. Новый сценарий — ещё один `.json` плюс `npm run gen-fixture`. Два разных на слух спикера получаются из единственного русского голоса Milena сменой высоты и темпа.
@@ -256,7 +275,7 @@ ASR_ENGINE=whisper npm run test:e2e   # русские сценарии чере
 
 ### E2E: диаризация
 
-`test/e2e/diarize.e2e.js` запускается тем же `npm run test:e2e`. Сценарий [diarize-hidden-tab.json](electron/test/e2e/scenarios/diarize-hidden-tab.json) моделирует скрытую вкладку: у части реплик нет события спикера, и тест требует, чтобы диаризация вернула правильные имена. Для этого нужны действительно разные голоса, а русский голос в macOS один, поэтому сценарий англоязычный (Samantha и Daniel). Быстрая проверка без распознавания — `npm run test:diarize-parity`.
+`test/e2e/diarize.e2e.js` запускается тем же `npm run test:e2e`. Сценарий [diarize-hidden-tab.json](electron/test/e2e/scenarios/diarize-hidden-tab.json) моделирует скрытую вкладку: у части реплик нет события спикера, и тест требует, чтобы диаризация вернула правильные имена. Для этого нужны действительно разные голоса, а русский голос в macOS один, поэтому сценарий англоязычный (Samantha и Daniel) и распознаётся Parakeet. Быстрая проверка без распознавания — `npm run test:diarize-parity`.
 
 ## Известные ограничения
 

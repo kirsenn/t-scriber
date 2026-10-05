@@ -20,9 +20,9 @@ _sample() {
   while true; do
     local ts
     ts=$(date +%s)
-    # Match node --test / whisper-cli / llama-completion; skip grep/awk itself
+    # Match node --test / llama-completion; skip grep/awk itself
     ps aux | awk -v ts="$ts" '
-      /[n]ode --test|[n]ode .*\/node |[w]hisper-cli|[l]lama-completion/ {
+      /[n]ode --test|[n]ode .*\/node |[l]lama-completion/ {
         name = $11; sub(".*/", "", name)
         printf "%d,%s,%s,%s,%.1f\n", ts, name, $2, $3, $6/1024
       }

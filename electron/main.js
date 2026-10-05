@@ -63,10 +63,13 @@ ipcMain.handle('save-config', (_, overrides) => {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2) + '\n');
 });
 
-// Returns the GigaAM model files missing from dir (basenames), empty when the folder is usable.
-ipcMain.handle('check-gigaam-dir', (_, dir) => {
-  const { gigaam } = require('./src/asr').engines;
-  return gigaam.missing({ modelDir: dir }).map(f => path.basename(f));
+// Returns the model files of an ASR engine ('gigaam' | 'parakeet') missing from dir (basenames),
+// empty when the folder is usable. Uses the engine's options so e.g. the Parakeet precision
+// from the config decides which files are required.
+ipcMain.handle('check-model-dir', (_, engine, dir) => {
+  const e = require('./src/asr').engines[engine];
+  const field = { gigaam: 'gigaam_model_dir', parakeet: 'parakeet_model_dir' }[engine];
+  return e.missing(e.options({ ...loadConfig().cfg, [field]: dir })).map(f => path.basename(f));
 });
 
 ipcMain.handle('choose-file', async (event, { filters = [], directory = false } = {}) => {

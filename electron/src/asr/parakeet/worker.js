@@ -1,9 +1,9 @@
 'use strict';
 
-// Worker thread for the GigaAM engine: VAD → chunked RNNT decoding → post-processing, off the
-// Electron main thread (same pattern as src/diarize/worker.js).
+// Worker thread for the Parakeet engine: VAD → chunked TDT decoding → filler removal → sentence
+// segments, off the Electron main thread (same pattern as ../gigaam/worker.js).
 //
-// Input (workerData): { pcmPath, modelDir, threads, replacements, dropFillers, abortFlag }
+// Input (workerData): { pcmPath, modelDir, quant, threads, abortFlag }
 // Output (postMessage): { ok: true, segments, stats } | { ok: false, error }.
 
 const path = require('node:path');
@@ -13,14 +13,13 @@ const { SAMPLE_RATE, loadAudioPcm } = require('../../audio.js');
 const { unpackedPath, throwIfAborted } = require('../../util.js');
 const { Recognizer } = require('./recognizer.js');
 const vad = require('../vad.js');
-const { dropFillers: removeFillers, toSegments } = require('../words.js');
-const text = require('./text.js');
+const { dropFillers, toSegments } = require('../words.js');
 
 const VAD_MODEL = unpackedPath(path.join(__dirname, '..', 'silero-vad.onnx'));
 
 (async () => {
   try {
-    const { pcmPath, modelDir, threads, replacements, dropFillers, abortFlag } = workerData;
+    const { pcmPath, modelDir, quant, threads, abortFlag } = workerData;
     const t0 = Date.now();
     const audio = loadAudioPcm(pcmPath);
 
@@ -30,7 +29,7 @@ const VAD_MODEL = unpackedPath(path.join(__dirname, '..', 'silero-vad.onnx'));
     const tVad = Date.now();
     throwIfAborted(abortFlag);
 
-    const rec = await new Recognizer(ort, modelDir, { threads }).load();
+    const rec = await new Recognizer(ort, modelDir, { quant, threads }).load();
     const tLoad = Date.now();
 
     let words = [];
@@ -39,12 +38,10 @@ const VAD_MODEL = unpackedPath(path.join(__dirname, '..', 'silero-vad.onnx'));
       const offsetMs = ch.start / SAMPLE_RATE * 1000;
       words = words.concat(await rec.transcribe(audio.subarray(ch.start, ch.end), offsetMs));
     }
-    if (dropFillers) words = removeFillers(words);
-    words = text.applyReplacements(words, text.compileReplacements(replacements));
 
     parentPort.postMessage({
       ok: true,
-      segments: toSegments(words),
+      segments: toSegments(dropFillers(words)),
       stats: {
         audioS: Math.round(audio.length / SAMPLE_RATE),
         chunks: chunks.length,

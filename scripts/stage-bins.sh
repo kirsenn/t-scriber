@@ -6,7 +6,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$ROOT/dist/staged"
-WHISPER_BUILD="$ROOT/third_party/whisper.cpp/build"
 LLAMA_BUILD="$ROOT/third_party/llama.cpp/build"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -54,18 +53,6 @@ stage_with_deps() {
         fix_rpath "$f"
     done
 }
-
-# ── whisper ──────────────────────────────────────────────────────────────────
-
-WSP="$STAGE/bin/whisper"
-mkdir -p "$WSP"
-echo "Staging whisper-cli…"
-stage_with_deps \
-    "$WHISPER_BUILD/bin/whisper-cli" "$WSP" \
-    "$WHISPER_BUILD/src" \
-    "$WHISPER_BUILD/ggml/src" \
-    "$WHISPER_BUILD/ggml/src/ggml-blas" \
-    "$WHISPER_BUILD/ggml/src/ggml-metal"
 
 # ── llama ─────────────────────────────────────────────────────────────────────
 

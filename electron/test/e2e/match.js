@@ -1,6 +1,6 @@
 'use strict';
 
-// Fuzzy fact-matching for the E2E test. Because whisper and the summariser are both
+// Fuzzy fact-matching for the E2E test. Because ASR and the summariser are both
 // non-deterministic, we never compare against an exact reference text. Instead we plant
 // distinctive facts in the scripted conversation and check them with recall: a fact is
 // "present" if any of its patterns survives normalisation. Tolerant to rephrasing.

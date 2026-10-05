@@ -21,7 +21,7 @@
   "facts": [
     { "id": "denis_task",  "label": "Денис берёт документацию", "patterns": ["документацию", "документация", "документации"] },
     { "id": "anna_task",   "label": "Анна — дизайн интерфейса", "patterns": ["дизайн интерфейса", "дизайн"] },
-    { "id": "review_date", "label": "Проверка через три недели", "patterns": ["три недели", "через три недели"] }
+    { "id": "review_date", "label": "Проверка через три недели", "patterns": ["три недели", "через три недели", "3 недели"] }
   ],
   "requiredSummaryFacts":  ["anna_task", "review_date"],
   "niceToHaveSummaryFacts": ["denis_task"],

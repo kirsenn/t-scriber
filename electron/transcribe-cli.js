@@ -7,7 +7,7 @@
 //   node transcribe-cli.js --dir ~/.tscriber/sessions/<ts>   # one session
 //   node transcribe-cli.js --latest                          # most recent
 //   node transcribe-cli.js --latest --summary-only           # just redo summary.md
-//   node transcribe-cli.js --latest --engine whisper         # Russian session via Whisper instead of GigaAM
+//   node transcribe-cli.js --latest --engine parakeet        # Russian session via Parakeet instead of GigaAM
 //
 // The meeting language comes from the session's meta.json unless --lang is given.
 
@@ -52,10 +52,6 @@ function parseArgs(argv, cfg) {
       case 'latest':       extra.latest      = val !== 'false'; break;
       case 'summary-only': extra.summaryOnly = val !== 'false'; break;
       case 'data':         cfg.data_dir      = val; break;
-      case 'bin':
-      case 'whisper-bin':  cfg.whisper_bin   = val; break;
-      case 'model':        cfg.model         = val; break;
-      case 'vad':          cfg.vad_model     = val; break;
       case 'lang':         cfg.language      = val; extra.lang = true; break;
       case 'threads':      cfg.threads       = parseInt(val, 10); break;
       case 'summarize':    cfg.summarize     = val !== 'false'; break;
@@ -63,6 +59,7 @@ function parseArgs(argv, cfg) {
       case 'gemma':        cfg.gemma_model   = val; break;
       case 'engine':       cfg.asr_ru        = val; break;
       case 'gigaam':       cfg.gigaam_model_dir = val; break;
+      case 'parakeet':     cfg.parakeet_model_dir = val; break;
     }
     i++;
   }

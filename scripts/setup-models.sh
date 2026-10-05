@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # One-shot setup for t-scriber's local AI tools (macOS / Apple Silicon).
-# Builds whisper.cpp (whisper-cli) and llama.cpp (llama-completion) with Metal,
-# and downloads the models. No daemon, no sudo required — uses Xcode's clang and
-# a standalone cmake if the system one is missing.
+# Builds llama.cpp (llama-completion) with Metal and downloads the models. No daemon, no sudo
+# required — uses Xcode's clang and a standalone cmake if the system one is missing.
 #
 #   ./scripts/setup-models.sh
 #
@@ -14,10 +13,6 @@ TP="$ROOT/third_party"
 MODELS="$ROOT/models"
 mkdir -p "$TP" "$MODELS"
 
-WHISPER_MODEL="$MODELS/ggml-large-v3-turbo-q5_0.bin"
-WHISPER_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
-VAD_MODEL="$MODELS/ggml-silero-v5.1.2.bin"
-VAD_URL="https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin"
 # Text-only E4B gguf (the multimodal e4b bundle — e.g. `ollama pull gemma4:e4b` — won't load
 # in llama.cpp's text loader; mmproj-*.gguf in the same repo is the separate vision/audio part).
 GEMMA="$MODELS/gemma-4-E4B-it-Q4_K_M.gguf"
@@ -25,6 +20,9 @@ GEMMA_URL="https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemm
 # GigaAM-v3 e2e RNNT (ASR engine for Russian, asr_ru: "gigaam") — ONNX export, MIT.
 GIGAAM_DIR="$MODELS/gigaam-v3-e2e-rnnt"
 GIGAAM_URL="https://huggingface.co/istupakov/gigaam-v3-onnx/resolve/main"
+# Parakeet-TDT-0.6B-v3 (ASR engine for English and fallback for Russian) — ONNX export, CC-BY-4.0.
+PARAKEET_DIR="$MODELS/parakeet-tdt-0.6b-v3"
+PARAKEET_URL="https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main"
 
 echo "==> repo root: $ROOT"
 
@@ -63,19 +61,22 @@ download() { # <path> <url> <label>
   curl -L --fail -o "$1" "$2"
 }
 
-build_repo whisper.cpp https://github.com/ggml-org/whisper.cpp whisper-cli "$TP/whisper.cpp/build/bin/whisper-cli"
 build_repo llama.cpp   https://github.com/ggml-org/llama.cpp     llama-completion "$TP/llama.cpp/build/bin/llama-completion"
 
-download "$WHISPER_MODEL" "$WHISPER_URL" "whisper large-v3-turbo q5 (~547 MB)"
-download "$VAD_MODEL"     "$VAD_URL"     "Silero VAD (~1 MB)"
-download "$GEMMA"         "$GEMMA_URL"   "Gemma 4 E4B Q4_K_M (~5.3 GB, text-only)"
+download "$GEMMA" "$GEMMA_URL" "Gemma 4 E4B Q4_K_M (~5.3 GB, text-only)"
 
 mkdir -p "$GIGAAM_DIR"
 for f in v3_e2e_rnnt_encoder.onnx v3_e2e_rnnt_decoder.onnx v3_e2e_rnnt_joint.onnx v3_e2e_rnnt_vocab.txt; do
   download "$GIGAAM_DIR/$f" "$GIGAAM_URL/$f" "GigaAM-v3 $f"
 done
 
-# GigaAM's log-mel front-end and Silero VAD are committed in electron/src/asr/gigaam/.
+mkdir -p "$PARAKEET_DIR"
+for f in nemo128.onnx encoder-model.onnx encoder-model.onnx.data decoder_joint-model.onnx vocab.txt; do
+  download "$PARAKEET_DIR/$f" "$PARAKEET_URL/$f" "Parakeet-TDT-0.6B-v3 $f"
+done
+
+# GigaAM's log-mel front-end is committed in electron/src/asr/gigaam/, the Silero VAD shared by
+# GigaAM and Parakeet in electron/src/asr/.
 # Diarization needs no setup here: the voice-encoder.onnx model (~6 MB) is committed in
 # electron/src/diarize/ and the onnxruntime-node addon comes in via `npm install`.
 

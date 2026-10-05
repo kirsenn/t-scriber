@@ -60,25 +60,21 @@ function defaults() {
     summarize:   true,
     language:    'en',
     threads:     0,
-    // Binaries are always bundled inside the app.
-    whisper_bin: packaged
-      ? path.join(resources, 'bin', 'whisper', 'whisper-cli')
-      : (tryWhich('whisper-cli') ?? repoPath('third_party/whisper.cpp/build/bin/whisper-cli')),
+    // The llama binary is always bundled inside the app.
     llama_bin:   packaged
       ? path.join(resources, 'bin', 'llama', 'llama-completion')
       : (tryWhich('llama-completion') ?? repoPath('third_party/llama.cpp/build/bin/llama-completion')),
     // Models are not bundled — user sets these via Settings (⌘,).
     // In dev mode fall back to the repo's models/ dir.
-    model:       packaged ? null : repoPath('models/ggml-large-v3-turbo-q5_0.bin'),
-    vad_model:   packaged
-      ? path.join(resources, 'models', 'ggml-silero-v5.1.2.bin')
-      : repoPath('models/ggml-silero-v5.1.2.bin'),
     gemma_model: packaged ? null : repoPath('models/gemma-4-E4B-it-Q4_K_M.gguf'),
-    // ASR engine for Russian sessions: 'gigaam' or 'whisper' (see src/asr/index.js). Other
-    // languages always use Whisper; a missing GigaAM model also falls back to Whisper.
+    // ASR engine for Russian sessions (see src/asr/index.js): 'gigaam' or 'parakeet'; when its
+    // model is missing the other one is used. Other languages always use Parakeet.
     asr_ru:      'gigaam',
     gigaam_model_dir: packaged ? null : repoPath('models/gigaam-v3-e2e-rnnt'),
     gigaam_drop_fillers: true,
+    // Parakeet-TDT-0.6B-v3: 'fp32' (default, ~2.5 GB) or 'int8' (~670 MB, noticeably less accurate).
+    parakeet_model_dir: packaged ? null : repoPath('models/parakeet-tdt-0.6b-v3'),
+    parakeet_quant: 'fp32',
     // Extra Cyrillic → Latin term spellings for GigaAM, merged over the defaults in
     // src/asr/gigaam/text.js. Keys are word stems, e.g. { "джир": "Jira" }; null disables a default.
     gigaam_replacements: {},
@@ -87,9 +83,6 @@ function defaults() {
     llm_chunk_chars: 60000,
     llm_max_tokens: 4096,
     // diarize_onnx_model defaults to electron/src/diarize/voice-encoder.onnx.
-    // whisper_prompt primes Whisper with domain vocabulary so Russian-pronounced English terms
-    // come out in Latin. Override per-project in tscriber.config.json → "whisper_prompt".
-    whisper_prompt: 'IT meeting. Terms: deploy, healthcheck, timeout, one-click, slack, router, API, SDK, iOS, Android, Google Pay, Apple Pay, refund, Jumio, integration, verification, age verification, release, staging, production, MCP, Concordium.',
   };
 }
 
@@ -130,7 +123,7 @@ function load(configPath = null) {
 
   Object.assign(cfg, overrides);
 
-  for (const key of ['data_dir', 'whisper_bin', 'model', 'vad_model', 'llama_bin', 'gemma_model', 'diarize_onnx_model', 'gigaam_model_dir']) {
+  for (const key of ['data_dir', 'llama_bin', 'gemma_model', 'diarize_onnx_model', 'gigaam_model_dir', 'parakeet_model_dir']) {
     if (cfg[key]) cfg[key] = expandHome(cfg[key]);
   }
 

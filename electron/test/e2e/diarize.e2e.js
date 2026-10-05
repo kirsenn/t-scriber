@@ -1,11 +1,11 @@
 'use strict';
 
 // End-to-end diarization test. Replays generated fixtures whose scenario has `"diarize": true`
-// (see scenario.js) through the real pipeline (whisper + diarize), then checks that tab-track
+// (see scenario.js) through the real pipeline (Parakeet + diarize), then checks that tab-track
 // segments belonging to speakers who had anchors (spoke before the "hidden tab" gap) are
 // resolved to their real names rather than 'unknown'.
 //
-// Opt-in (heavy, needs whisper + the diarize voice-encoder.onnx model):
+// Opt-in (heavy, needs the Parakeet model + the diarize voice-encoder.onnx model):
 //   cd electron && npm run test:e2e
 //
 // Skips cleanly if the diarize engine isn't runnable (see diarizeSkipReason).
@@ -22,6 +22,7 @@ const { CaptureServer } = require('../../src/capture.js');
 const { process: pipelineProcess } = require('../../src/pipeline.js');
 const { load } = require('../../src/config.js');
 const { modelPath } = require('../../src/diarize');
+const { select } = require('../../src/asr');
 const { T0, deriveExpectations, discover } = require('./scenario.js');
 
 const BYTES_PER_MS = 32;
@@ -31,9 +32,7 @@ const SOURCE_MIC   = 1;
 
 function binarySkipReason(cfg) {
   if (!process.env.RUN_E2E) return 'set RUN_E2E=1 to run the heavy E2E test';
-  const needed = [cfg.whisper_bin, cfg.model, cfg.vad_model];
-  for (const p of needed) if (!p || !fs.existsSync(p)) return `missing binary/model: ${p}`;
-  return null;
+  return select({ ...cfg, language: 'en' }).error;
 }
 
 // The JS diarize engine needs the voice-encoder ONNX model and the onnxruntime-node addon.
@@ -45,8 +44,7 @@ function diarizeSkipReason(cfg) {
   return null;
 }
 
-// ASR_ENGINE=gigaam|whisper overrides the recogniser used for the (Russian) fixtures.
-const baseCfg   = { ...load().cfg, ...(process.env.ASR_ENGINE ? { asr_ru: process.env.ASR_ENGINE } : {}) };
+const baseCfg   = load().cfg;
 const binReason = binarySkipReason(baseCfg);
 const diarReason = diarizeSkipReason(baseCfg);
 const fixtures  = discover('diarize');
@@ -123,7 +121,7 @@ async function runDiarizeScenario(fx) {
     }
 
     // Hard assertion: each hidden (event-less) segment must be re-attributed to the CORRECT
-    // speaker by voice. We locate the segment by its unique marker word (whisper-stable) and
+    // speaker by voice. We locate the segment by its unique marker word (ASR-stable) and
     // check the diarization-assigned speaker matches the scripted one.
     const attribution = exp.hiddenAttribution;
     assert.ok(attribution.length > 0, `${tag} scenario has no hiddenAttribution markers — nothing to assert`);
@@ -131,7 +129,7 @@ async function runDiarizeScenario(fx) {
     for (const { speaker, marker } of attribution) {
       const seg = dialogue.find(s =>
         s.source === 'tab' && s.text.toLowerCase().includes(marker.toLowerCase()));
-      assert.ok(seg, `${tag} no tab segment containing marker "${marker}" (whisper output drifted?)`);
+      assert.ok(seg, `${tag} no tab segment containing marker "${marker}" (ASR output drifted?)`);
       assert.equal(seg.speaker, speaker,
         `${tag} hidden segment "${marker}" attributed to "${seg.speaker}", expected "${speaker}" — diarization mismatch`);
       console.log(`  ✓ "${marker}" → ${seg.speaker} (expected ${speaker})`);

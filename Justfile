@@ -1,5 +1,4 @@
 ELECTRON_DIR  := "electron"
-WHISPER_SRC   := "third_party/whisper.cpp"
 LLAMA_SRC     := "third_party/llama.cpp"
 
 # ── dev ──────────────────────────────────────────────────────────────────────
@@ -13,15 +12,6 @@ test:
     cd {{ELECTRON_DIR}} && npm test
 
 # ── build from source ─────────────────────────────────────────────────────────
-
-# Compile whisper.cpp (whisper-cli + dylibs)
-build-whisper:
-    cmake -S {{WHISPER_SRC}} -B {{WHISPER_SRC}}/build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DWHISPER_BUILD_TESTS=OFF \
-        -DWHISPER_BUILD_EXAMPLES=ON \
-        -DBUILD_SHARED_LIBS=ON
-    cmake --build {{WHISPER_SRC}}/build --config Release -j$(sysctl -n hw.logicalcpu)
 
 # Compile llama.cpp (llama-completion + dylibs)
 build-llama:
@@ -51,11 +41,11 @@ _package:
 package: stage deps _package
 
 # Full build from source through to .dmg (takes a while)
-build: build-whisper build-llama package
+build: build-llama package
 
 # ── benchmarking ─────────────────────────────────────────────────────────────
 
-# Run E2E suite and measure peak CPU/RAM of whisper + llama + node
+# Run E2E suite and measure peak CPU/RAM of llama + node (ASR runs inside node)
 bench-e2e:
     bash scripts/measure-e2e.sh /tmp/tscriber-bench
 
@@ -69,5 +59,4 @@ bench-ui:
 clean:
     rm -rf dist/staged
     rm -rf {{ELECTRON_DIR}}/dist
-    rm -rf {{WHISPER_SRC}}/build
     rm -rf {{LLAMA_SRC}}/build

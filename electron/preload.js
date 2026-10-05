@@ -11,5 +11,5 @@ contextBridge.exposeInMainWorld('tscriber', {
   getConfig:  ()    => ipcRenderer.invoke('get-config'),
   saveConfig: cfg   => ipcRenderer.invoke('save-config', cfg),
   chooseFile: opts  => ipcRenderer.invoke('choose-file', opts),
-  checkGigaamDir: dir => ipcRenderer.invoke('check-gigaam-dir', dir),
+  checkModelDir: (engine, dir) => ipcRenderer.invoke('check-model-dir', engine, dir),
 });

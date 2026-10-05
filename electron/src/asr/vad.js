@@ -1,12 +1,12 @@
 'use strict';
 
-// Silero VAD for the GigaAM engine. GigaAM decodes at most ~25 s per pass, so long tracks are
-// split into speech chunks first. Uses silero-vad.onnx — the "sequence" export from the
-// silero-vad pip package (MIT), which scores a whole block of 32 ms frames per ONNX call —
-// and a port of silero_vad.utils_vad.get_speech_timestamps_from_probs (with
+// Silero VAD for the transducer engines (gigaam/, parakeet/). They decode a bounded window per
+// pass (~25 s for GigaAM), so long tracks are split into speech chunks first. Uses
+// silero-vad.onnx — the "sequence" export from the silero-vad pip package (MIT), which scores a
+// whole block of 32 ms frames per ONNX call — and a port of silero_vad.utils_vad.get_speech_timestamps_from_probs (with
 // max_speech_duration_s = inf; over-long regions are split here at the quietest frame).
 
-const { SAMPLE_RATE } = require('../../audio.js');
+const { SAMPLE_RATE } = require('../audio.js');
 
 const FRAME = 512;          // samples per VAD frame at 16 kHz
 const CONTEXT = 64;         // trailing samples of the previous frame prefixed to each frame
