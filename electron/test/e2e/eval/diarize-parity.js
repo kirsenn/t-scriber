@@ -1,7 +1,7 @@
 'use strict';
 
 // Diarization smoke check: runs the JS embedder (onnxruntime-node) + clustering on the
-// committed diarize fixture and verifies the two hidden segments are attributed to the
+// generated diarize fixture and verifies the two hidden segments are attributed to the
 // right speakers — without needing whisper. Fast local sanity check for the JS engine.
 //
 //   cd electron && node test/e2e/eval/diarize-parity.js

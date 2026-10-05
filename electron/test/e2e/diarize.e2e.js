@@ -1,6 +1,6 @@
 'use strict';
 
-// End-to-end diarization test. Replays committed fixtures whose scenario has `"diarize": true`
+// End-to-end diarization test. Replays generated fixtures whose scenario has `"diarize": true`
 // (see scenario.js) through the real pipeline (whisper + diarize), then checks that tab-track
 // segments belonging to speakers who had anchors (spoke before the "hidden tab" gap) are
 // resolved to their real names rather than 'unknown'.

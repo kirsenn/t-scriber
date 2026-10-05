@@ -3,7 +3,7 @@
 
 // Run-once generator for E2E audio fixtures. NOT part of the test run — it shells out to
 // macOS `say` + `afconvert`, so it only runs on a dev machine. The artifacts it writes
-// under test/fixtures/e2e/<scenario>/ are committed and replayed by transcribe.e2e.js.
+// under test/fixtures/e2e/<scenario>/ are gitignored and replayed by transcribe.e2e.js.
 //
 // Scenarios are plain JSON in test/e2e/scenarios/. Add a new conversation by dropping a new
 // <name>.json there (see scenarios/planning.json for the schema), then regenerate.

@@ -1,6 +1,6 @@
 'use strict';
 
-// Full end-to-end transcription test, no UI. Replays committed audio fixtures through the
+// Full end-to-end transcription test, no UI. Replays generated audio fixtures through the
 // real WebSocket capture path, lets the real pipeline run (whisper + Gemma), and asserts on
 // the artifacts. Heavy and slow (loads whisper + a ~5GB Gemma), so it is opt-in:
 //
