@@ -54,6 +54,9 @@ stage_with_deps() {
     done
 }
 
+# Start clean so binaries dropped from the app don't linger in the bundle.
+rm -rf "$STAGE/bin"
+
 # ── llama ─────────────────────────────────────────────────────────────────────
 
 LM="$STAGE/bin/llama"
